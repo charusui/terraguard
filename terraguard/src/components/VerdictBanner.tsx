@@ -52,15 +52,19 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
               lineHeight: 1,
               color: cfg.accent,
               letterSpacing: '0.02em',
+              marginBottom: '4px'
             }}>
               {Math.round(result.change_point.confidence * 100)}%
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--on-primary-mute)', maxWidth: '160px', lineHeight: 1.4, marginTop: '4px' }}>
+              Probability that radar shift represents physical construction
             </div>
           </div>
         )}
       </div>
 
       {/* Explanation */}
-      <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--on-primary-mute)' }}>
+      <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--on-primary-mute)', whiteSpace: 'pre-wrap' }}>
         {result.explanation}
       </p>
 

@@ -98,7 +98,11 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
     MIN_CONFIDENCE = 0.3
 
     overall_variance = smoothed.std()
-    confidence = float(np.clip(best_shift / (overall_variance + 1e-9) / 3.0, 0.0, 1.0))
+    snr = best_shift / (overall_variance + 1e-9)
+    
+    # Map the Signal-to-Noise Ratio (SNR) to a more realistic probability curve.
+    # An SNR of 1.0 is actually very significant in speckle-heavy SAR data.
+    confidence = float(np.clip(0.65 + (snr * 0.15), 0.0, 0.99))
 
     if best_shift < MIN_SHIFT_DB or confidence < MIN_CONFIDENCE:
         return ChangePointResult(

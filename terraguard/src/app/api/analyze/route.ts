@@ -52,17 +52,23 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // stdout may have a truncation prefix from some environments — find the JSON
-        const jsonStart = stdout.indexOf('{');
-        const jsonStr = jsonStart >= 0 ? stdout.slice(jsonStart) : stdout;
-        const result = JSON.parse(jsonStr);
+        // Python might print warnings before the JSON (e.g., earthengine-api auth warnings).
+        // Since json.dumps prints the entire JSON on a single line, we just take the last non-empty line.
+        const lines = stdout.trim().split('\n');
+        const jsonStr = lines[lines.length - 1];
+        
+        // Python's json.dumps allows 'NaN' which breaks JS JSON.parse. Replace it with 'null'
+        const sanitizedJsonStr = jsonStr.replace(/\bNaN\b/g, 'null');
+        const result = JSON.parse(sanitizedJsonStr);
 
         if (result.error) {
           resolve(NextResponse.json({ error: result.error }, { status: 422 }));
         } else {
           resolve(NextResponse.json(result));
         }
-      } catch {
+      } catch (e) {
+        console.error('PARSE ERROR. Raw stdout:', stdout);
+        console.error('Parse exception:', e);
         resolve(NextResponse.json(
           { error: 'Failed to parse analysis output', raw: stdout },
           { status: 500 }

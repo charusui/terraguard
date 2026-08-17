@@ -31,8 +31,11 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
             "explanation": (
                 "No statistically significant change in backscatter was detected at this "
                 "coordinate during the entire analysis window. Despite billing claims, the "
-                "satellite record shows no evidence of construction activity. This may indicate "
-                "ghost billing or a project that has not yet broken ground."
+                "satellite record shows no evidence of construction activity.\n\n"
+                "Top 3 Possibilities:\n"
+                "• Ghost Project: The infrastructure was never built, despite billing claims.\n"
+                "• Severely Delayed Execution: The project has not yet broken ground.\n"
+                "• Sub-surface / Invisible Work: The work performed did not alter the ground surface roughness enough to be detected by radar (e.g., interior renovations)."
             ),
             "days_difference": None,
         }
@@ -46,9 +49,11 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
             "verdict": "PRE_EXISTING",
             "explanation": (
                 f"Satellite backscatter data shows significant ground disturbance approximately "
-                f"{days_before} days BEFORE the contract Notice-to-Proceed date. This indicates "
-                "the structure may have already existed prior to the contract award — a potential "
-                "indicator of pre-existing infrastructure fraud."
+                f"{days_before} days BEFORE the contract Notice-to-Proceed date.\n\n"
+                "Top 3 Possibilities:\n"
+                "• Recycled Infrastructure Fraud: The contractor is claiming a new project on an asset already built by a previous contract.\n"
+                "• Retroactive Awarding: Construction began long before the official Notice-to-Proceed was actually signed.\n"
+                "• Misaligned Coordinates: The GPS coordinate provided points to an older, adjacent structure rather than the true project site."
             ),
             "days_difference": days_diff,
         }
@@ -58,7 +63,11 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
             "explanation": (
                 "The detected construction start date is consistent with the contract timeline. "
                 "Backscatter change was observed within the expected window following the "
-                "Notice-to-Proceed date. No anomaly detected for this location."
+                "Notice-to-Proceed date.\n\n"
+                "Top 3 Possibilities:\n"
+                "• Legitimate Execution: The project broke ground on schedule after the Notice-to-Proceed.\n"
+                "• Coincidental Disturbance: Ground was broken by an unrelated event (e.g., land clearing by a private owner) exactly when the project was supposed to start.\n"
+                "• Preparatory Work Only: Ground was cleared on schedule, but actual construction may have subsequently stalled."
             ),
             "days_difference": days_diff,
         }

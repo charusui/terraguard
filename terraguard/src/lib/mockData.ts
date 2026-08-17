@@ -53,12 +53,12 @@ export const KNOWN_CASES: KnownCase[] = [
     description: 'Drainage improvement project — SAR change point detected 47 days before NTP.',
   },
   {
-    name: 'Davao — Infrastructure Case Study',
-    lat: 7.1907,
-    lon: 125.4553,
-    claimed_ntp_date: '2022-06-01',
-    source: 'COA Special Audit 2022',
-    description: 'Bridge approach fill — no significant SAR change detected despite 100% billing claim.',
+    name: 'Manila — Flood Control Project',
+    lat: 14.5995,
+    lon: 120.9842,
+    claimed_ntp_date: '2026-08-01',
+    source: 'COA Special Audit 2024',
+    description: 'Flood control barrier — satellite history shows ground disturbance months before the contract was officially awarded.',
   },
 ];
 
