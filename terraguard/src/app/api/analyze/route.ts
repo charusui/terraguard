@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 
-const BACKEND_DIR = path.join(process.cwd(), '..', 'backend');
+const BACKEND_DIR = path.join(process.cwd(), 'backend');
 const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
 
 export async function POST(req: NextRequest) {

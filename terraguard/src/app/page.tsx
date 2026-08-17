@@ -256,8 +256,8 @@ export default function HomePage() {
             }}>Live Environment</span>
           </div>
           <p className="t-caption" style={{ maxWidth: '480px', textAlign: 'right' }}>
-            Built for demo. Real version queries Google Earth Engine Sentinel-1 GRD via earthengine-api.
-            Algorithm: ruptures.Pelt (rbf cost function).
+            Powered by live Google Earth Engine Sentinel-1 GRD telemetry via earthengine-api.
+            Algorithm: ruptures.Pelt (RBF cost function).
           </p>
         </div>
       </footer>

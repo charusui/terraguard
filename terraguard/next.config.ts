@@ -6,9 +6,9 @@ import path from "path";
 config({ path: path.resolve(process.cwd(), "..", ".env") });
 
 const nextConfig: NextConfig = {
-  // Note: 'output: export' removed — API routes (/api/analyze) require server mode.
-  // Deploy to Vercel or run with `next start` locally.
-  // For a static-only demo (mock data, no GEE), add back: output: 'export'
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./backend/**/*'],
+  },
 };
 
 export default nextConfig;
