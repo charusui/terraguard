@@ -81,7 +81,7 @@ class handler(BaseHTTPRequestHandler):
                 },
                 "verdict": verdict_info["verdict"],
                 "explanation": verdict_info["explanation"],
-                "raw_data": smoothed_list,
+                "series": smoothed_list,
             }
 
             self.send_response(200)
