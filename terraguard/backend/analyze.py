@@ -29,13 +29,14 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
         return {
             "verdict": "NO_CHANGE_DETECTED",
             "explanation": (
-                "No statistically significant change in backscatter was detected at this "
-                "coordinate during the entire analysis window. Despite billing claims, the "
-                "satellite record shows no evidence of construction activity.\n\n"
+                "No statistically significant change in radar backscatter was detected at this "
+                "coordinate during the full analysis window. The satellite record does not show "
+                "evidence of surface-level construction activity. This discrepancy may warrant "
+                "further review by an authorized auditor.\n\n"
                 "Top 3 Possibilities:\n"
-                "• Ghost Project: The infrastructure was never built, despite billing claims.\n"
-                "• Severely Delayed Execution: The project has not yet broken ground.\n"
-                "• Sub-surface / Invisible Work: The work performed did not alter the ground surface roughness enough to be detected by radar (e.g., interior renovations)."
+                "• Absent Ground Activity: No surface disturbance consistent with construction was recorded — may warrant physical site verification.\n"
+                "• Delayed Execution: The project may not have broken ground within the expected timeline.\n"
+                "• Sub-surface / Radar-Invisible Work: Some work types (e.g., interior fit-out, drainage lining) do not alter surface radar reflectivity and would not appear in this analysis."
             ),
             "days_difference": None,
         }
@@ -48,12 +49,13 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
         return {
             "verdict": "PRE_EXISTING",
             "explanation": (
-                f"Satellite backscatter data shows significant ground disturbance approximately "
-                f"{days_before} days BEFORE the contract Notice-to-Proceed date.\n\n"
+                f"Radar backscatter data indicates significant ground disturbance approximately "
+                f"{days_before} days before the contract Notice-to-Proceed date. This timeline "
+                f"discrepancy may warrant review by an authorized auditor.\n\n"
                 "Top 3 Possibilities:\n"
-                "• Recycled Infrastructure Fraud: The contractor is claiming a new project on an asset already built by a previous contract.\n"
-                "• Retroactive Awarding: Construction began long before the official Notice-to-Proceed was actually signed.\n"
-                "• Misaligned Coordinates: The GPS coordinate provided points to an older, adjacent structure rather than the true project site."
+                "• Pre-existing Structure: The detected change may relate to a prior structure or contract at the same site — records should be cross-checked.\n"
+                "• Early Mobilization: Site preparation may have begun before the NTP was formally issued, which may or may not be permissible under contract terms.\n"
+                "• Coordinate Mismatch: The recorded GPS coordinates may point to an adjacent site — physical verification is recommended."
             ),
             "days_difference": days_diff,
         }

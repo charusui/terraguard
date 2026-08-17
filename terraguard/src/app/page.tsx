@@ -255,9 +255,12 @@ export default function HomePage() {
               border: '1px solid rgba(0,196,180,0.3)', color: '#00c4b4', background: 'rgba(0,196,180,0.06)',
             }}>Live Environment</span>
           </div>
-          <p className="t-caption" style={{ maxWidth: '480px', textAlign: 'right' }}>
+          <p className="t-caption" style={{ maxWidth: '520px', textAlign: 'right', lineHeight: 1.6 }}>
             Powered by live Google Earth Engine Sentinel-1 GRD telemetry via earthengine-api.
-            Algorithm: ruptures.Pelt (RBF cost function).
+            Algorithm: ruptures.Pelt (RBF cost function).<br />
+            <span style={{ opacity: 0.5 }}>
+              Results are indicative only and intended to support authorized audits. They do not constitute legal findings or accusations of wrongdoing.
+            </span>
           </p>
         </div>
       </footer>
