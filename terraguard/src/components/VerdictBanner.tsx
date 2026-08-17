@@ -1,7 +1,7 @@
 'use client';
 
 import { type AnalysisResult, type VerdictType } from '@/lib/mockData';
-import { WarningDiamond, CheckCircle, Question, ArrowRight } from '@phosphor-icons/react';
+import { WarningDiamond, CheckCircle, Question } from '@phosphor-icons/react';
 
 const CONFIG: Record<VerdictType, {
   Icon: React.ElementType;
@@ -13,19 +13,19 @@ const CONFIG: Record<VerdictType, {
     Icon: WarningDiamond,
     label: 'Pre-Existing Structure Detected',
     className: 'verdict-red',
-    accent: '#f87171',
+    accent: 'var(--error)',
   },
   NO_CHANGE_DETECTED: {
     Icon: Question,
     label: 'No Construction Change Detected',
     className: 'verdict-yellow',
-    accent: '#fbbf24',
+    accent: 'var(--warning)',
   },
   CONSISTENT: {
     Icon: CheckCircle,
     label: 'Timeline Consistent',
     className: 'verdict-green',
-    accent: '#4ade80',
+    accent: 'var(--success)',
   },
 };
 
@@ -35,28 +35,28 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
   const diff = result.change_point.days_difference;
 
   return (
-    <div style={{ paddingTop: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Verdict flag */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
         <div className={`verdict-flag ${cfg.className}`} style={{ alignSelf: 'flex-start', marginTop: '4px' }}>
-          <Icon size={13} weight="bold" />
+          <Icon size={16} weight="fill" />
           {cfg.label}
         </div>
         {result.change_point.detected_date && (
           <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div className="t-micro-cap" style={{ color: 'var(--ink-mute)' }}>Detector Confidence</div>
+            <div className="t-micro-cap">Detector Confidence</div>
             <div style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-mono)',
               fontSize: '32px',
-              fontWeight: 700,
+              fontWeight: 600,
               lineHeight: 1,
-              color: cfg.accent,
-              letterSpacing: '0.02em',
+              color: 'var(--ink)',
+              letterSpacing: '-0.02em',
               marginBottom: '4px'
             }}>
               {Math.round(result.change_point.confidence * 100)}%
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--on-primary-mute)', maxWidth: '160px', lineHeight: 1.4, marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--mute)', maxWidth: '160px', lineHeight: 1.4, marginTop: '4px' }}>
               Probability that radar shift represents physical construction
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
       </div>
 
       {/* Explanation */}
-      <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--on-primary-mute)', whiteSpace: 'pre-wrap' }}>
+      <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap' }}>
         {result.explanation}
       </p>
 
@@ -81,14 +81,15 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
         <DataItem
           label="Detected Change"
           value={result.change_point.detected_date ?? 'None'}
-          accent={result.change_point.detected_date ? cfg.accent : undefined}
+          accent={result.change_point.detected_date ? 'var(--ink)' : undefined}
           mono
         />
         {diff !== null && (
           <DataItem
             label={diff < 0 ? 'Days Before NTP' : 'Days After NTP'}
             value={`${Math.abs(diff)} days`}
-            accent={diff < 0 ? '#f87171' : '#4ade80'}
+            accent={diff < 0 ? 'var(--error)' : 'var(--success)'}
+            mono
           />
         )}
       </div>
@@ -99,12 +100,12 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
 function DataItem({ label, value, mono, accent }: { label: string; value: string; mono?: boolean; accent?: string }) {
   return (
     <div>
-      <div className="t-micro-cap" style={{ color: 'var(--ink-mute)', marginBottom: '4px' }}>{label}</div>
+      <div className="t-micro-cap" style={{ marginBottom: '4px' }}>{label}</div>
       <div style={{
         fontSize: '14px',
-        fontWeight: 400,
-        fontFamily: mono ? 'monospace' : 'var(--font-body)',
-        color: accent ?? 'var(--on-primary)',
+        fontWeight: 500,
+        fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)',
+        color: accent ?? 'var(--ink)',
         letterSpacing: mono ? '0.02em' : undefined,
       }}>{value}</div>
     </div>

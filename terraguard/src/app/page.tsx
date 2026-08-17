@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Broadcast, ArrowRight, ShieldCheck, ChartLine, Warning, Circle } from '@phosphor-icons/react';
+import { Broadcast, ArrowRight, ShieldCheck, ChartLine, WarningDiamond } from '@phosphor-icons/react';
 import SingleLookup from '@/components/SingleLookup';
 import BatchMode from '@/components/BatchMode';
 import LoginScreen from '@/components/LoginScreen';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function HomePage() {
   const reduce = useReducedMotion();
@@ -23,173 +24,165 @@ export default function HomePage() {
   if (!token) return <LoginScreen onSuccess={(t) => setToken(t)} />;
 
   return (
-    <div style={{ background: 'var(--canvas-night)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--canvas)', minHeight: '100vh', color: 'var(--ink)' }}>
 
       {/* ─── NAV ─── */}
       <nav className="nav-overlay">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Broadcast size={18} color="#00c4b4" weight="bold" />
+          <Broadcast size={20} color="var(--ink)" weight="fill" />
           <span style={{
             fontFamily: 'var(--font-display)',
             fontSize: '18px',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--on-primary)',
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            color: 'var(--ink)',
           }}>TerraGuard</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <span className="t-micro-cap" style={{ color: 'var(--ink-mute)' }}>Philippines · DPWH</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <span className="t-caption hidden md:inline">Philippines · DPWH</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-            <span className="t-micro-cap" style={{ color: '#4ade80' }}>Sentinel-1 Live</span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
+            <span className="t-caption" style={{ color: 'var(--ink)', fontWeight: 500 }}>Live</span>
           </div>
+          <a href="/guide" className="btn-ghost" style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '14px' }}>
+            Guide & Prompts
+          </a>
+          <ThemeToggle />
         </div>
       </nav>
 
-      {/* ─── HERO — full-bleed SAR photography ─── */}
-      <section style={{ position: 'relative', width: '100%', minHeight: '100dvh', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
-        {/* Hero image */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'url(/hero.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }} />
-        {/* Bottom gradient for text legibility */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.85) 75%, #000 100%)',
-        }} />
+      {/* ─── ASYMMETRIC HERO ─── */}
+      <section style={{ paddingTop: '128px', paddingBottom: '96px', overflow: 'hidden' }}>
+        <div className="band-inner">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '64px',
+            alignItems: 'center'
+          }}>
+            {/* Left Content */}
+            <motion.div
+              initial={reduce ? false : { opacity: 0, x: -24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              style={{ maxWidth: '600px' }}
+            >
+              <h1 className="t-display-xxl" style={{ marginBottom: '24px', color: 'var(--ink)' }}>
+                Verify public projects from space.
+              </h1>
 
-        {/* Hero content */}
-        <div className="band-inner" style={{ position: 'relative', zIndex: 1, paddingBottom: '80px', width: '100%' }}>
-          <motion.p
-            className="t-micro-cap"
-            style={{ color: '#00c4b4', marginBottom: '20px' }}
-            initial={reduce ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            Sentinel-1 SAR · Bayesian Change Detection
-          </motion.p>
+              <p className="t-body-lg" style={{ marginBottom: '40px', color: 'var(--body)' }}>
+                TerraGuard uses satellite data to check if government infrastructure is actually being built, or if the structures were already there before the contract started.
+              </p>
 
-          <motion.h1
-            className="t-display-xxl"
-            style={{ maxWidth: '820px', marginBottom: '24px' }}
-            initial={reduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
-            Did the structure<br />exist before the contract?
-          </motion.h1>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <button className="btn-ghost btn-ghost-accent" onClick={() => document.getElementById('analysis')?.scrollIntoView({ behavior: 'smooth' })}>
+                  Start Analysis
+                </button>
+                <button className="btn-ghost" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                  How it works
+                </button>
+              </div>
+            </motion.div>
 
-          <motion.p
-            className="t-body-lg"
-            style={{ maxWidth: '520px', marginBottom: '40px' }}
-            initial={reduce ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          >
-            TerraGuard compares satellite-detected construction dates against contract
-            Notice-to-Proceed dates to surface pre-existing infrastructure fraud and ghost billing.
-          </motion.p>
+            {/* Right Asset — Public-Facing Graphic */}
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                background: 'var(--canvas-soft)',
+                borderRadius: '12px',
+                padding: '40px',
+                boxShadow: '0 24px 48px -12px rgba(0,0,0,0.05)',
+                border: '1px solid var(--hairline-strong)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '48px', height: '48px', borderRadius: '50%',
+                  background: 'var(--error-soft)', color: 'var(--error)'
+                }}>
+                  <WarningDiamond size={24} weight="fill" />
+                </div>
+                <div>
+                  <div className="t-micro-cap" style={{ color: 'var(--error)', fontWeight: 700 }}>Flagged for Review</div>
+                  <div className="t-display-sm" style={{ color: 'var(--ink)' }}>Pre-Existing Structure</div>
+                </div>
+              </div>
 
-          <motion.div
-            style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}
-            initial={reduce ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <button className="btn-ghost" onClick={() => document.getElementById('analysis')?.scrollIntoView({ behavior: 'smooth' })}>
-              Run Analysis <ArrowRight size={14} weight="bold" />
-            </button>
-          </motion.div>
+              <div className="hairline" style={{ margin: '8px 0' }} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <div className="t-micro-cap" style={{ marginBottom: '4px' }}>Claimed Start</div>
+                  <div style={{ fontSize: '18px', fontWeight: 500, color: 'var(--ink)' }}>Jan 15, 2023</div>
+                </div>
+                <div>
+                  <div className="t-micro-cap" style={{ marginBottom: '4px' }}>Detected Start</div>
+                  <div style={{ fontSize: '18px', fontWeight: 500, color: 'var(--ink)' }}>Nov 04, 2022</div>
+                </div>
+              </div>
+
+              <div style={{
+                marginTop: '8px', padding: '16px', borderRadius: '8px',
+                background: 'var(--canvas)', border: '1px solid var(--hairline)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              }}>
+                <span className="t-body" style={{ color: 'var(--mute)' }}>Discrepancy</span>
+                <span style={{ color: 'var(--error)', fontWeight: 600, fontSize: '18px' }}>72 days early</span>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* ─── HOW IT WORKS — 4-column grid, no eyebrows ─── */}
-      <section className="section-dark" style={{ padding: '96px 0' }}>
+      {/* ─── HOW IT WORKS — ASYMMETRIC BENTO ─── */}
+      <section id="how-it-works" className="section-dark" style={{ padding: '96px 0', borderTop: '1px solid var(--hairline)' }}>
         <div className="band-inner">
-          <h2 className="t-display-xl" style={{ marginBottom: '56px', maxWidth: '480px' }}>
-            Four-step detection pipeline
+          <h2 className="t-display-xl" style={{ marginBottom: '64px', maxWidth: '480px' }}>
+            Independent verification pipeline
           </h2>
+
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '1px',
             background: 'var(--hairline)',
             border: '1px solid var(--hairline)',
+            borderRadius: '8px',
+            overflow: 'hidden'
           }}>
-            {[
-              { n: '01', title: 'Pull SAR Data', body: 'Query Sentinel-1 GRD backscatter at the coordinate via Google Earth Engine' },
-              { n: '02', title: 'Smooth Series', body: 'Apply rolling median filter to reduce SAR speckle noise before detection' },
-              { n: '03', title: 'Detect Change', body: 'Run ruptures.Pelt (Penalized Exact Linear Time) change point detection on the VV time series' },
-              { n: '04', title: 'Return Verdict', body: 'Compare detected date vs. NTP date with ±12-day satellite revisit tolerance' },
-            ].map(step => (
-              <div key={step.n} style={{ background: 'var(--canvas-night)', padding: '32px 28px' }}>
-                <div style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '48px',
-                  fontWeight: 700,
-                  color: 'var(--hairline)',
-                  lineHeight: 1,
-                  marginBottom: '20px',
-                  letterSpacing: '0.02em',
-                }}>{step.n}</div>
-                <div className="t-display-lg" style={{ marginBottom: '12px', fontSize: '20px' }}>{step.title}</div>
-                <p className="t-body">{step.body}</p>
+            {/* Cell 1 */}
+            <div style={{ background: 'var(--canvas)', padding: '48px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <Broadcast size={24} style={{ marginBottom: '24px', color: 'var(--ink)' }} />
+                <h3 className="t-display-sm" style={{ marginBottom: '12px' }}>01. Pull SAR Data</h3>
+                <p className="t-body" style={{ color: 'var(--body)', maxWidth: '600px' }}>
+                  Query Sentinel-1 GRD backscatter at the given coordinates via Google Earth Engine. Radar penetrates clouds, providing a reliable historical time series regardless of weather.
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── HOW IT WORKS ─── */}
-      <section style={{ padding: '80px 0', borderTop: '1px solid var(--hairline)' }}>
-        <div className="band-inner">
-          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <h2 className="t-display-xl" style={{ marginBottom: '16px' }}>How TerraGuard Detects Fraud</h2>
-            <p className="t-body-lg" style={{ color: 'var(--ink-mute)', maxWidth: '600px', margin: '0 auto' }}>
-              We use radar satellite imagery and change-point detection algorithms to verify infrastructure progress independently of ground reports.
-            </p>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '24px'
-          }}>
-            {/* Step 1 */}
-            <div style={{ background: 'var(--canvas-section)', padding: '32px', border: '1px solid var(--hairline)', borderRadius: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', marginBottom: '24px', color: 'var(--on-primary)' }}>
-                <Broadcast size={24} />
-              </div>
-              <h3 className="t-heading" style={{ marginBottom: '12px' }}>1. Radar Satellite Data</h3>
-              <p className="t-body" style={{ color: 'var(--ink-mute)' }}>
-                We pull Sentinel-1 SAR (Synthetic Aperture Radar) data from Google Earth Engine. Radar penetrates clouds and weather, giving us a reliable backscatter time series for the coordinates.
-              </p>
             </div>
-            
-            {/* Step 2 */}
-            <div style={{ background: 'var(--canvas-section)', padding: '32px', border: '1px solid var(--hairline)', borderRadius: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', background: 'rgba(0,196,180,0.1)', borderRadius: '50%', marginBottom: '24px', color: '#00c4b4' }}>
-                <ChartLine size={24} />
-              </div>
-              <h3 className="t-heading" style={{ marginBottom: '12px' }}>2. Anomaly Detection</h3>
-              <p className="t-body" style={{ color: 'var(--ink-mute)' }}>
-                The raw radar data is smoothed using rolling medians, and fed into a Ruptures Pelt algorithm. This mathematical model identifies the exact date the backscatter fundamentally shifted—indicating ground disruption.
+
+            {/* Cell 2 */}
+            <div style={{ background: 'var(--canvas-soft)', padding: '48px' }}>
+              <ChartLine size={24} style={{ marginBottom: '24px', color: 'var(--ink)' }} />
+              <h3 className="t-display-sm" style={{ marginBottom: '12px' }}>02. Detect Change</h3>
+              <p className="t-body" style={{ color: 'var(--body)', maxWidth: '600px' }}>
+                Apply rolling median filters to reduce SAR speckle noise, then run ruptures.Pelt change point detection on the VV time series to find the exact moment of ground disruption.
               </p>
             </div>
 
-            {/* Step 3 */}
-            <div style={{ background: 'var(--canvas-section)', padding: '32px', border: '1px solid var(--hairline)', borderRadius: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', background: 'rgba(74,222,128,0.1)', borderRadius: '50%', marginBottom: '24px', color: '#4ade80' }}>
-                <ShieldCheck size={24} />
-              </div>
-              <h3 className="t-heading" style={{ marginBottom: '12px' }}>3. Verdict Generation</h3>
-              <p className="t-body" style={{ color: 'var(--ink-mute)' }}>
-                We compare the algorithm's detected date to the contractor's official Notice To Proceed (NTP) date. Ghost projects and pre-existing structures are instantly flagged for auditors.
+            {/* Cell 3 */}
+            <div style={{ background: 'var(--canvas-soft-2)', padding: '48px' }}>
+              <ShieldCheck size={24} style={{ marginBottom: '24px', color: 'var(--ink)' }} />
+              <h3 className="t-display-sm" style={{ marginBottom: '12px' }}>03. Return Verdict</h3>
+              <p className="t-body" style={{ color: 'var(--body)', maxWidth: '600px' }}>
+                Compare the mathematically detected construction date against the official Notice-to-Proceed (NTP) date. Timeline discrepancies and missing construction signals are flagged for review.
               </p>
             </div>
           </div>
@@ -197,46 +190,51 @@ export default function HomePage() {
       </section>
 
       {/* ─── ANALYSIS SECTION ─── */}
-      <section id="analysis" style={{ background: 'var(--canvas-night)', borderTop: '1px solid var(--hairline)', minHeight: '800px', padding: '64px 0' }}>
+      <section id="analysis" style={{ background: 'var(--canvas)', borderTop: '1px solid var(--hairline)', minHeight: '800px', padding: '96px 0' }}>
         <div className="band-inner">
-          {/* Section header — no eyebrow per taste-skill rule (used one in hero) */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '40px', flexWrap: 'wrap', gap: '16px' }}>
-            <h2 className="t-display-xl">Satellite Analysis</h2>
-            {/* Tab pills */}
-            <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--hairline)', padding: '5px', borderRadius: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+            <h2 className="t-display-xl">Analysis</h2>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--canvas-soft)', border: '1px solid var(--hairline)', padding: '4px', borderRadius: '9999px' }}>
               <button className={`tab-pill ${tab === 'single' ? 'active' : ''}`} onClick={() => setTab('single')}>Single Lookup</button>
               <button className={`tab-pill ${tab === 'batch' ? 'active' : ''}`} onClick={() => setTab('batch')}>Batch Mode</button>
             </div>
           </div>
 
-          <div className="hairline" />
+          <div className="hairline" style={{ marginBottom: '40px' }} />
 
           {tab === 'single' && <SingleLookup />}
           {tab === 'batch' && <BatchMode />}
         </div>
       </section>
 
-      {/* ─── STATS BAND — full-width dark section ─── */}
-      <section style={{ background: 'var(--canvas-section)', borderTop: '1px solid var(--hairline)', borderBottom: '1px solid var(--hairline)', padding: '64px 0' }}>
+      {/* ─── STATS BAND ─── */}
+      <section style={{ background: 'var(--canvas)', padding: '0 0 96px 0' }}>
         <div className="band-inner">
+          <div className="hairline" style={{ marginBottom: '64px' }} />
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            display: 'flex',
+            flexWrap: 'wrap',
             gap: '1px',
             background: 'var(--hairline)',
+            border: '1px solid var(--hairline)',
+            borderRadius: '8px',
+            overflow: 'hidden'
           }}>
             {[
-              { label: 'Satellite revisit', value: '6–12', unit: 'days' },
-              { label: 'Buffer radius', value: '30', unit: 'm' },
-              { label: 'Confidence floor', value: '30', unit: '%' },
-              { label: 'Tolerance', value: '±12', unit: 'days' },
+              { label: 'Satellite revisit', value: '6–12', unit: 'days', desc: 'Frequency of new satellite imagery.' },
+              { label: 'Buffer radius', value: '30', unit: 'm', desc: 'Scan area around target coordinates.' },
+              { label: 'Confidence floor', value: '30', unit: '%', desc: 'Filters out seasonal vegetation and minor ground shifts to prevent false alarms.' },
+              { label: 'Tolerance', value: '±12', unit: 'days', desc: 'Grace period from contract date.' },
             ].map(s => (
-              <div key={s.label} style={{ background: 'var(--canvas-section)', padding: '32px 28px' }}>
-                <div className="t-micro-cap" style={{ color: 'var(--ink-mute)', marginBottom: '10px' }}>{s.label}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <div key={s.label} style={{ flex: '1 1 180px', background: 'var(--canvas-soft)', padding: '32px' }}>
+                <div className="t-micro-cap" style={{ marginBottom: '12px' }}>{s.label}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
                   <span className="stat-num">{s.value}</span>
-                  <span className="t-body" style={{ color: 'var(--ink-mute)' }}>{s.unit}</span>
+                  <span className="t-body">{s.unit}</span>
                 </div>
+                <p style={{ fontSize: '12px', lineHeight: '1.5', color: 'var(--mute)' }}>
+                  {s.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -244,21 +242,16 @@ export default function HomePage() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer style={{ padding: '40px 0', borderTop: '1px solid var(--hairline)' }}>
-        <div className="band-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Broadcast size={14} color="#00c4b4" weight="bold" />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>TerraGuard</span>
-            <span style={{
-              fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase',
-              padding: '2px 8px', borderRadius: '4px',
-              border: '1px solid rgba(0,196,180,0.3)', color: '#00c4b4', background: 'rgba(0,196,180,0.06)',
-            }}>Live Environment</span>
+      <footer style={{ padding: '48px 0', background: 'var(--canvas)', borderTop: '1px solid var(--hairline)' }}>
+        <div className="band-inner" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Broadcast size={18} color="var(--ink)" weight="fill" />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600 }}>TerraGuard</span>
           </div>
           <p className="t-caption" style={{ maxWidth: '520px', textAlign: 'right', lineHeight: 1.6 }}>
             Powered by live Google Earth Engine Sentinel-1 GRD telemetry via earthengine-api.
-            Algorithm: ruptures.Pelt (RBF cost function).<br />
-            <span style={{ opacity: 0.5 }}>
+            Algorithm: ruptures.Pelt (RBF cost function).<br /><br />
+            <span style={{ color: 'var(--mute)' }}>
               Results are indicative only and intended to support authorized audits. They do not constitute legal findings or accusations of wrongdoing.
             </span>
           </p>
