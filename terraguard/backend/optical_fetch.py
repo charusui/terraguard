@@ -61,16 +61,34 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
 
     date_str = image.date().format("YYYY-MM-dd").getInfo()
     
-    url = image.getThumbURL({
-        'region': buffered,
-        'dimensions': 512,
-        'format': 'png',
-        'bands': ['B4', 'B3', 'B2'],
-        'min': 0,
-        'max': 3000
-    })
+    try:
+        # Fetch raw pixel array directly using getInfo()
+        arr = image.select(['B4', 'B3', 'B2']).sampleRectangle(region=buffered).getInfo()
+        
+        # Convert to PNG bytes using Pillow & Numpy
+        from PIL import Image
+        import numpy as np
+        import io
+        
+        b4 = np.array(arr['properties']['B4'])
+        b3 = np.array(arr['properties']['B3'])
+        b2 = np.array(arr['properties']['B2'])
+        
+        rgb = np.dstack((b4, b3, b2))
+        rgb = np.clip(rgb / 3000.0, 0, 1) * 255
+        rgb = rgb.astype(np.uint8)
+        
+        img = Image.fromarray(rgb).resize((512, 512), Image.Resampling.LANCZOS)
+        
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        pixels = img_byte_arr.getvalue()
+        
+    except Exception as e:
+        print("sampleRectangle error:", e)
+        return None
 
     return {
-        "url": url,
+        "pixels": pixels,
         "date": date_str
     }

@@ -56,20 +56,20 @@ class handler(BaseHTTPRequestHandler):
 
             response_data = {}
             
-            if before_data:
+            if before_data and before_data.get("pixels"):
                 b_date = datetime.strptime(before_data["date"], "%Y-%m-%d")
                 b_offset = (b_date - det_date).days
-                b_b64 = process_optical_image(before_data["url"])
+                b_b64 = process_optical_image(before_data["pixels"])
                 response_data["before"] = {
                     "image": b_b64,
                     "date": before_data["date"],
                     "offset_days": b_offset
                 }
                 
-            if after_data:
+            if after_data and after_data.get("pixels"):
                 a_date = datetime.strptime(after_data["date"], "%Y-%m-%d")
                 a_offset = (a_date - det_date).days
-                a_b64 = process_optical_image(after_data["url"])
+                a_b64 = process_optical_image(after_data["pixels"])
                 response_data["after"] = {
                     "image": a_b64,
                     "date": after_data["date"],
