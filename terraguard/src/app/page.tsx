@@ -1,55 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, useReducedMotion } from 'motion/react';
-import { Broadcast, ArrowRight, ShieldCheck, ChartLine, WarningDiamond } from '@phosphor-icons/react';
-import SingleLookup from '@/components/SingleLookup';
-import BatchMode from '@/components/BatchMode';
-import LoginScreen from '@/components/LoginScreen';
-import ThemeToggle from '@/components/ThemeToggle';
+import { Broadcast, ShieldCheck, ChartLine, WarningDiamond } from '@phosphor-icons/react';
 
 export default function HomePage() {
   const reduce = useReducedMotion();
-  const [tab, setTab] = useState<'single' | 'batch'>('single');
-  const [token, setToken] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem('tg_token');
-    setToken(stored);
-    setAuthChecked(true);
-  }, []);
-
-  if (!authChecked) return null; // prevent flash
-  if (!token) return <LoginScreen onSuccess={(t) => setToken(t)} />;
 
   return (
     <div style={{ background: 'var(--canvas)', minHeight: '100vh', color: 'var(--ink)' }}>
-
-      {/* ─── NAV ─── */}
-      <nav className="nav-overlay">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Broadcast size={20} color="var(--ink)" weight="fill" />
-          <span style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '18px',
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            color: 'var(--ink)',
-          }}>TerraGuard</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <span className="t-caption hidden md:inline">Philippines · DPWH</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
-            <span className="t-caption" style={{ color: 'var(--ink)', fontWeight: 500 }}>Live</span>
-          </div>
-          <a href="/guide" className="btn-ghost" style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '14px' }}>
-            Guide & Prompts
-          </a>
-          <ThemeToggle />
-        </div>
-      </nav>
 
       {/* ─── ASYMMETRIC HERO ─── */}
       <section style={{ paddingTop: '128px', paddingBottom: '96px', overflow: 'hidden' }}>
@@ -76,9 +35,9 @@ export default function HomePage() {
               </p>
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <button className="btn-ghost btn-ghost-accent" onClick={() => document.getElementById('analysis')?.scrollIntoView({ behavior: 'smooth' })}>
+                <Link href="/dashboard" className="btn-ghost btn-ghost-accent" style={{ textDecoration: 'none' }}>
                   Start Analysis
-                </button>
+                </Link>
                 <button className="btn-ghost" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
                   How it works
                 </button>
@@ -189,23 +148,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─── ANALYSIS SECTION ─── */}
-      <section id="analysis" style={{ background: 'var(--canvas)', borderTop: '1px solid var(--hairline)', minHeight: '800px', padding: '96px 0' }}>
-        <div className="band-inner">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
-            <h2 className="t-display-xl">Analysis</h2>
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--canvas-soft)', border: '1px solid var(--hairline)', padding: '4px', borderRadius: '9999px' }}>
-              <button className={`tab-pill ${tab === 'single' ? 'active' : ''}`} onClick={() => setTab('single')}>Single Lookup</button>
-              <button className={`tab-pill ${tab === 'batch' ? 'active' : ''}`} onClick={() => setTab('batch')}>Batch Mode</button>
-            </div>
-          </div>
 
-          <div className="hairline" style={{ marginBottom: '40px' }} />
-
-          {tab === 'single' && <SingleLookup />}
-          {tab === 'batch' && <BatchMode />}
-        </div>
-      </section>
 
       {/* ─── STATS BAND ─── */}
       <section style={{ background: 'var(--canvas)', padding: '0 0 96px 0' }}>

@@ -285,9 +285,7 @@ body {
 }
 
 .tab-pill.active {
-  background: var(--canvas-soft-2);
   color: var(--ink);
-  border-color: var(--hairline-strong);
 }
 
 .tab-pill:not(.active):hover { background: var(--canvas-soft); color: var(--ink); }

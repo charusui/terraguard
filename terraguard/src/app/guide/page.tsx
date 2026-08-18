@@ -1,8 +1,6 @@
 'use client';
 
-import { ArrowLeft, BookOpen, ChatCircle, MagnifyingGlass, WarningDiamond, ShieldCheck, ChartLine } from '@phosphor-icons/react';
-import Link from 'next/link';
-import ThemeToggle from '@/components/ThemeToggle';
+import { BookOpen, ChatCircle, MagnifyingGlass, WarningDiamond, ShieldCheck, ChartLine } from '@phosphor-icons/react';
 import { motion, useReducedMotion } from 'motion/react';
 
 export default function GuidePage() {
@@ -10,24 +8,7 @@ export default function GuidePage() {
 
   return (
     <div style={{ background: 'var(--canvas)', minHeight: '100vh', color: 'var(--ink)' }}>
-      {/* ─── NAV ─── */}
-      <nav className="nav-overlay">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <ArrowLeft size={16} color="var(--mute)" weight="bold" />
-            <span style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '18px',
-              fontWeight: 600,
-              letterSpacing: '-0.02em',
-              color: 'var(--ink)',
-            }}>TerraGuard</span>
-          </Link>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <ThemeToggle />
-        </div>
-      </nav>
+
 
       <main style={{ paddingTop: '128px', paddingBottom: '96px' }}>
         <div className="band-inner" style={{ maxWidth: '800px' }}>
