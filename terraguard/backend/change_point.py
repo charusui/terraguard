@@ -40,9 +40,9 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         )
 
     # --- Preprocessing ---
-    # 1. Rolling median (window=3) to suppress SAR speckle noise
+    # 1. Rolling median (window=7) to heavily suppress temporary SAR speckle and transient events (trucks/floods)
     values = df["backscatter_db"].values.copy()
-    smoothed = pd.Series(values).rolling(window=3, center=True, min_periods=1).median().values.copy()
+    smoothed = pd.Series(values).rolling(window=7, center=True, min_periods=1).median().values.copy()
 
     # 2. Z-score outlier removal (>3σ replaced with rolling median)
     z_scores = np.abs((smoothed - smoothed.mean()) / (smoothed.std() + 1e-9))
@@ -56,8 +56,8 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
     signal = smoothed.reshape(-1, 1)
     try:
         algo = rpt.Pelt(model="rbf").fit(signal)
-        # pen=3 is a moderate penalty; lower = more sensitive
-        breakpoints = algo.predict(pen=3)
+        # pen=10 is a strict penalty to ignore false positives in noisy urban environments
+        breakpoints = algo.predict(pen=10)
         # Pelt always includes len(signal) as last breakpoint — remove it
         breakpoints = [b for b in breakpoints if b < len(signal)]
     except Exception:
@@ -93,15 +93,14 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         )
 
     # --- Significance thresholds ---
-    # 1.5 dB is the typical noise floor for aggregated GRD data
-    MIN_SHIFT_DB = 1.5
+    # 2.0 dB threshold to avoid flagging minor structural noise
+    MIN_SHIFT_DB = 2.0
     MIN_CONFIDENCE = 0.3
 
     overall_variance = smoothed.std()
     snr = best_shift / (overall_variance + 1e-9)
     
     # Map the Signal-to-Noise Ratio (SNR) to a more realistic probability curve.
-    # An SNR of 1.0 is actually very significant in speckle-heavy SAR data.
     confidence = float(np.clip(0.65 + (snr * 0.15), 0.0, 0.99))
 
     if best_shift < MIN_SHIFT_DB or confidence < MIN_CONFIDENCE:
