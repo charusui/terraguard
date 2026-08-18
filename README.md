@@ -1,15 +1,23 @@
 # TerraGuard 🛰️
 
-TerraGuard is an automated fraud detection tool designed for the DPWH (Department of Public Works and Highways) in the Philippines. It verifies infrastructure project progress using satellite radar imagery, independently of on-the-ground reports.
+TerraGuard is an automated fraud detection tool designed for the DPWH (Department of Public Works and Highways) in the Philippines. It verifies infrastructure project progress using satellite imagery, independently of on-the-ground reports.
 
-By querying **Sentinel-1 GRD** data via Google Earth Engine and applying the **Ruptures Pelt** change-point detection algorithm, TerraGuard detects exactly when ground was broken at a coordinate. It then compares this detected date against the official **Notice To Proceed (NTP)** date to flag pre-existing structures, ghost projects, or timeline inconsistencies.
+### How It Works
+* **Queries Data**: Pulls **Sentinel-1 GRD** (radar backscatter) and **Sentinel-2** (optical) data via Google Earth Engine.
+* **Detects Change**: Applies the **Ruptures Pelt** change-point detection algorithm to identify exactly when ground was broken.
+* **Verifies Timelines**: Compares the detected physical start date against the official **Notice To Proceed (NTP)** contract date.
+* **Flags Anomalies**: Automatically flags pre-existing structures, ghost projects, and timeline inconsistencies.
+
+### 🧠 Core Algorithm
+TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF cost function. This was selected over Bayesian models because it is:
+* **Fast**: Optimized for rapid execution across thousands of coordinates.
+* **Resilient**: Highly effective at filtering out SAR speckle noise.
+* **Precise**: Provides deterministic point estimates for scalable auditing.
 
 ## Tech Stack
 * **Frontend**: Next.js (App Router), React, Recharts, Phosphor Icons
 * **Backend**: Python, Google Earth Engine API, Pandas, Ruptures
 * **Auth**: Token-based simple demo auth (`/api/auth`)
-
-> **Note on Algorithm Choice:** TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF cost function as its core detection engine. This approach was selected over full Bayesian posterior models because it is significantly faster, highly resilient against SAR speckle noise, and provides deterministic, precise point estimates necessary for rapid auditing at scale.
 
 ## Prerequisites
 
