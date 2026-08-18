@@ -63,11 +63,6 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
         )}
       </div>
 
-      {/* Explanation */}
-      <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap' }}>
-        {result.explanation}
-      </p>
-
       {/* Data strip */}
       <div style={{
         display: 'grid',

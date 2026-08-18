@@ -350,18 +350,14 @@ export default function AnalysisPanel() {
             </p>
           </div>
           <SARChart result={result} />
+          
           <div className="hairline" style={{ margin: '40px 0' }} />
-          {/* Method tags */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            {['COPERNICUS/S1_GRD', 'VV Polarization', 'IW Mode', 'ruptures.Pelt (rbf)', '±12 day tolerance', '30 m buffer'].map(tag => (
-              <span key={tag} style={{
-                fontSize: '12px', fontWeight: 500,
-                padding: '4px 10px', borderRadius: '4px',
-                border: '1px solid var(--hairline-strong)',
-                color: 'var(--mute)',
-                background: 'var(--canvas-soft)',
-              }}>{tag}</span>
-            ))}
+          
+          {/* Explanation (Top 3 possibilities) */}
+          <div style={{ marginBottom: '40px' }}>
+            <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap' }}>
+              {result.explanation}
+            </p>
           </div>
 
           {aiSummary && (

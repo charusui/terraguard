@@ -25,9 +25,11 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
     if direction == "before":
         start = target_date - timedelta(days=90)
         end = target_date
+        display_date = target_date - timedelta(days=15)
     else:
         start = target_date
         end = target_date + timedelta(days=90)
+        display_date = target_date + timedelta(days=15)
         
     start_str = start.strftime("%Y-%m-%d")
     end_str = end.strftime("%Y-%m-%d")
@@ -39,23 +41,25 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterBounds(buffered)
         .filterDate(start_str, end_str)
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40))
     )
 
-    # Sort strictly by lowest cloud cover in the 90 day window to avoid clouds blocking the view
-    collection = collection.sort("CLOUDY_PIXEL_PERCENTAGE", True)
-
-    image = collection.first()
+    first_img = collection.first()
     
     # We must use getInfo() carefully
     try:
-        info = image.getInfo()
+        info = first_img.getInfo()
         if not info:
             return None
     except Exception:
         return None
 
-    date_str = image.date().format("YYYY-MM-dd").getInfo()
+    # Use a median composite to eliminate clouds completely
+    # We MUST use setDefaultProjection from the first image, otherwise sampleRectangle returns a solid block!
+    proj = first_img.select('B4').projection()
+    image = collection.median().setDefaultProjection(proj)
+
+    date_str = display_date.strftime("%Y-%m-%d")
     
     try:
         # Fetch raw pixel array directly using getInfo()
