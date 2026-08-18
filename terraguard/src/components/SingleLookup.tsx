@@ -35,9 +35,50 @@ export default function AnalysisPanel() {
   const [progressStep, setProgressStep] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [nlQuery, setNlQuery] = useState('');
+  const [aiParsing, setAiParsing] = useState(false);
+  const [nlMessage, setNlMessage] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+
+  const handleParseNL = async () => {
+    if (!nlQuery.trim()) return;
+    setAiParsing(true);
+    setNlMessage(null);
+    try {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
+      const res = await fetch('/api/nl_query', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'parse', text: nlQuery })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      if (data.parsed.start_date) setClaimedDate(data.parsed.start_date);
+      if (data.parsed.location_name) setProjectName(data.parsed.location_name);
+      
+      if (data.geocoded.lat && data.geocoded.lon) {
+        setLat(data.geocoded.lat.toString());
+        setLon(data.geocoded.lon.toString());
+        if (data.geocoded.display_name) {
+          setNlMessage(`Showing results for ${data.geocoded.display_name} — not what you meant? Enter coordinates directly.`);
+        }
+      } else {
+        setNlMessage(`Could not find coordinates for "${data.parsed.location_name || 'that location'}". Please enter them manually.`);
+      }
+    } catch (e) {
+      setNlMessage(`AI Parsing failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setAiParsing(false);
+    }
+  };
 
   const handleAnalyze = async () => {
-    setLoading(true); setResult(null); setError(null); setProgressStep(0);
+    setLoading(true); setResult(null); setError(null); setProgressStep(0); setAiSummary(null);
     try {
       let finalLat: number, finalLon: number, finalDate: string, finalName: string, scenario: VerdictType | undefined;
       if (mode === 'known') {
@@ -57,6 +98,23 @@ export default function AnalysisPanel() {
       }
       const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName, scenario);
       setResult(res);
+      
+      // Request AI summary in the background
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
+      fetch('/api/nl_query', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'summarize', verdict: res })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.summary) setAiSummary(d.summary);
+      })
+      .catch(console.error);
+
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Analysis failed');
     } finally {
@@ -108,24 +166,56 @@ export default function AnalysisPanel() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', maxWidth: '640px' }}>
-            {[
-              { label: 'Latitude', val: lat, set: setLat, ph: '14.5995' },
-              { label: 'Longitude', val: lon, set: setLon, ph: '120.9842' },
-              { label: 'Contract NTP Date', val: claimedDate, set: setClaimedDate, type: 'date' },
-              { label: 'Project Name', val: projectName, set: setProjectName, ph: 'Optional' },
-            ].map(f => (
-              <div key={f.label}>
-                <label className="t-micro-cap" style={{ display: 'block', marginBottom: '8px' }}>{f.label}</label>
-                <input
-                  className="field"
-                  type={f.type ?? 'text'}
-                  value={f.val}
-                  onChange={e => f.set(e.target.value)}
-                  placeholder={f.ph}
-                />
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
+            {/* AI Assistant Input */}
+            <div style={{ padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline-strong)' }}>
+              <label className="t-micro-cap" style={{ display: 'block', marginBottom: '12px', color: 'var(--ink)' }}>
+                ASK AI ASSISTANT
+              </label>
+              <textarea
+                className="field"
+                placeholder="Describe what you want to investigate (e.g., 'investigate the Manila flood control between 2023-01-01 and 2023-12-31')"
+                value={nlQuery}
+                onChange={e => setNlQuery(e.target.value)}
+                style={{ width: '100%', minHeight: '80px', resize: 'vertical', marginBottom: '12px' }}
+              />
+              <button 
+                className="btn-ghost" 
+                onClick={handleParseNL}
+                disabled={aiParsing}
+                style={{ opacity: aiParsing ? 0.6 : 1, width: '100%', justifyContent: 'center' }}
+              >
+                {aiParsing ? 'Extracting...' : 'Extract Fields'}
+              </button>
+              {nlMessage && (
+                <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--mute)' }}>
+                  {nlMessage}
+                </div>
+              )}
+            </div>
+
+            <div className="hairline" />
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              {[
+                { label: 'Latitude', val: lat, set: setLat, ph: '14.5995' },
+                { label: 'Longitude', val: lon, set: setLon, ph: '120.9842' },
+                { label: 'Contract NTP Date', val: claimedDate, set: setClaimedDate, type: 'date' },
+                { label: 'Project Name', val: projectName, set: setProjectName, ph: 'Optional' },
+              ].map(f => (
+                <div key={f.label}>
+                  <label className="t-micro-cap" style={{ display: 'block', marginBottom: '8px' }}>{f.label}</label>
+                  <input
+                    className="field"
+                    type={f.type ?? 'text'}
+                    value={f.val}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder={f.ph}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -199,6 +289,14 @@ export default function AnalysisPanel() {
           style={{ display: 'flex', flexDirection: 'column', gap: '0' }}
         >
           <VerdictBanner result={result} />
+          
+          {aiSummary && (
+            <div style={{ marginTop: '24px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
+              <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
+              <p className="t-body" style={{ color: 'var(--body)' }}>{aiSummary}</p>
+            </div>
+          )}
+
           <div className="hairline" style={{ margin: '40px 0' }} />
           <div style={{ marginBottom: '16px' }}>
             <p className="t-micro-cap" style={{ color: 'var(--mute)', marginBottom: '4px' }}>
