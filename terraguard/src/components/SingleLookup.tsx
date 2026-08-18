@@ -343,13 +343,6 @@ export default function AnalysisPanel() {
         >
           <VerdictBanner result={result} />
           
-          {aiSummary && (
-            <div style={{ marginTop: '24px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
-              <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
-              <p className="t-body" style={{ color: 'var(--body)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary}</p>
-            </div>
-          )}
-
           <div className="hairline" style={{ margin: '40px 0' }} />
           <div style={{ marginBottom: '16px' }}>
             <p className="t-micro-cap" style={{ color: 'var(--mute)', marginBottom: '4px' }}>
@@ -370,6 +363,13 @@ export default function AnalysisPanel() {
               }}>{tag}</span>
             ))}
           </div>
+
+          {aiSummary && (
+            <div style={{ marginTop: '40px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
+              <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
+              <p className="t-body" style={{ color: 'var(--body)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary}</p>
+            </div>
+          )}
 
 
           {/* OPTICAL VERIFICATION LAYER */}

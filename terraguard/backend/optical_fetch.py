@@ -25,13 +25,9 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
     if direction == "before":
         start = target_date - timedelta(days=90)
         end = target_date
-        # UI offset trick: show as 15 days before
-        display_date = target_date - timedelta(days=15)
     else:
         start = target_date
         end = target_date + timedelta(days=90)
-        # UI offset trick: show as 15 days after
-        display_date = target_date + timedelta(days=15)
         
     start_str = start.strftime("%Y-%m-%d")
     end_str = end.strftime("%Y-%m-%d")
@@ -43,14 +39,23 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterBounds(buffered)
         .filterDate(start_str, end_str)
-        # Less strict cloud filter since we are taking a median
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40))
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
     )
 
-    # Median composite completely removes transient clouds!
-    image = collection.median()
+    # Sort strictly by lowest cloud cover in the 90 day window to avoid clouds blocking the view
+    collection = collection.sort("CLOUDY_PIXEL_PERCENTAGE", True)
+
+    image = collection.first()
     
-    date_str = display_date.strftime("%Y-%m-%d")
+    # We must use getInfo() carefully
+    try:
+        info = image.getInfo()
+        if not info:
+            return None
+    except Exception:
+        return None
+
+    date_str = image.date().format("YYYY-MM-dd").getInfo()
     
     try:
         # Fetch raw pixel array directly using getInfo()
