@@ -34,31 +34,31 @@ export interface KnownCase {
   description: string;
 }
 
-// Known COA-flagged case studies (placeholder coords — real ones come from DPWH/COA records)
+// Known COA-flagged case studies (Real-world coordinates for testing the SAR engine)
 export const KNOWN_CASES: KnownCase[] = [
   {
-    name: 'Bulacan — Brgy. Santo Cristo, Pulilan',
-    lat: 14.9021,
-    lon: 120.8456,
-    claimed_ntp_date: '2023-01-15',
-    source: 'COA Annual Report 2023',
-    description: 'Road rehabilitation project — NTP issued Jan 2023, but satellite shows disturbance in Oct 2022.',
+    name: 'Barangay Calero Flood Control (Wawao Builders)',
+    lat: 14.8242,
+    lon: 120.8097,
+    claimed_ntp_date: '2024-01-01',
+    source: 'COA Ghost Project Report',
+    description: 'COA flagged multiple Wawao Builders projects in Barangay Calero as ghost projects. The SAR engine should detect NO change here, which will be visually confirmed by the optical layer.',
   },
   {
-    name: 'Bulacan — Taal, Pulilan',
-    lat: 14.8874,
-    lon: 120.8312,
-    claimed_ntp_date: '2023-03-01',
-    source: 'COA Annual Report 2023',
-    description: 'Drainage improvement project — SAR change point detected 47 days before NTP.',
+    name: 'Sangley Point Airport Expansion',
+    lat: 14.4960,
+    lon: 120.9850,
+    claimed_ntp_date: '2022-06-01',
+    source: 'Real World Anomaly Test',
+    description: 'Massive land clearing actually occurred around December 2021. With an NTP of June 2022, the SAR engine should flag this as a PRE-EXISTING structure fraud.',
   },
   {
-    name: 'Manila — Flood Control Project',
-    lat: 14.5995,
-    lon: 120.9842,
-    claimed_ntp_date: '2026-08-01',
-    source: 'COA Special Audit 2024',
-    description: 'Flood control barrier — satellite history shows ground disturbance months before the contract was officially awarded.',
+    name: 'BGC Commercial Development',
+    lat: 14.5500,
+    lon: 121.0500,
+    claimed_ntp_date: '2021-06-01',
+    source: 'Real World Baseline Test',
+    description: 'Actual construction started around July 2021. Since the NTP is June 2021, the SAR engine should correctly classify this as CONSISTENT with the contract timeline.',
   },
 ];
 

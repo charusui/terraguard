@@ -93,8 +93,8 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         )
 
     # --- Significance thresholds ---
-    # 2.0 dB threshold to avoid flagging minor structural noise
-    MIN_SHIFT_DB = 2.0
+    # 0.5 dB threshold to detect real structural changes (which typically range from 0.7 - 1.5 dB)
+    MIN_SHIFT_DB = 0.5
     MIN_CONFIDENCE = 0.3
 
     overall_variance = smoothed.std()
