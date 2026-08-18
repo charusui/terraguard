@@ -13,8 +13,12 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# Next.js build output
+.next
+
+# Test scripts and temporary data
+test*.py
+test*.png
 /out/
 
 # production
