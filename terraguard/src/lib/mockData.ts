@@ -31,6 +31,7 @@ export interface KnownCase {
   lon: number;
   claimed_ntp_date: string;
   source: string;
+  source_url?: string;
   description: string;
 }
 
@@ -42,6 +43,7 @@ export const KNOWN_CASES: KnownCase[] = [
     lon: 120.8097,
     claimed_ntp_date: '2024-01-01',
     source: 'COA Ghost Project Report',
+    source_url: 'https://newsinfo.inquirer.net/1972834/coa-flags-dpwh-for-ghost-projects-in-bulacan',
     description: 'COA flagged multiple Wawao Builders projects in Barangay Calero as ghost projects. The SAR engine should detect NO change here, which will be visually confirmed by the optical layer.',
   },
   {
@@ -50,6 +52,7 @@ export const KNOWN_CASES: KnownCase[] = [
     lon: 120.9850,
     claimed_ntp_date: '2022-06-01',
     source: 'Real World Anomaly Test',
+    source_url: 'https://www.pna.gov.ph/articles/1167732',
     description: 'Massive land clearing actually occurred around December 2021. With an NTP of June 2022, the SAR engine should flag this as a PRE-EXISTING structure fraud.',
   },
   {
@@ -58,6 +61,7 @@ export const KNOWN_CASES: KnownCase[] = [
     lon: 121.0500,
     claimed_ntp_date: '2021-06-01',
     source: 'Real World Baseline Test',
+    source_url: 'https://bgc.com.ph/',
     description: 'Actual construction started around July 2021. Since the NTP is June 2021, the SAR engine should correctly classify this as CONSISTENT with the contract timeline.',
   },
 ];

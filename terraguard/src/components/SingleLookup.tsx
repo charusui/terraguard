@@ -214,7 +214,7 @@ export default function AnalysisPanel() {
               }}>
                 <Stat label="NTP Date" value={kase.claimed_ntp_date} mono />
                 <Stat label="Coordinates" value={`${kase.lat}°N, ${kase.lon}°E`} mono />
-                <Stat label="Source" value={kase.source} />
+                <Stat label="Source" value={kase.source} link={kase.source_url} />
               </div>
             )}
           </div>
@@ -444,11 +444,17 @@ export default function AnalysisPanel() {
   );
 }
 
-function Stat({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Stat({ label, value, mono, link }: { label: string; value: string; mono?: boolean; link?: string }) {
   return (
     <div>
       <div className="t-micro-cap" style={{ marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '14px', fontWeight: 400, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', color: 'var(--ink)' }}>{value}</div>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 400, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', color: 'var(--brand)', textDecoration: 'underline' }}>
+          {value}
+        </a>
+      ) : (
+        <div style={{ fontSize: '14px', fontWeight: 400, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', color: 'var(--ink)' }}>{value}</div>
+      )}
     </div>
   );
 }

@@ -71,7 +71,7 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
             breakpoint_index=None,
         )
 
-    # Take the breakpoint with the largest mean-shift
+    # Take the earliest breakpoint that has a significant shift (>0.5 dB)
     best_bp = None
     best_shift = 0.0
     for bp in breakpoints:
@@ -80,9 +80,24 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         before = smoothed[:bp].mean()
         after = smoothed[bp:].mean()
         shift = abs(after - before)
-        if shift > best_shift:
+        
+        # If this shift is significant, take it as the FIRST construction event and stop looking
+        if shift > 0.5:
             best_shift = shift
             best_bp = bp
+            break
+            
+    # If no breakpoint exceeded 0.5, just take the largest one to fall through to the minimums check
+    if best_bp is None and breakpoints:
+        for bp in breakpoints:
+            if bp < 2 or bp > len(signal) - 2:
+                continue
+            before = smoothed[:bp].mean()
+            after = smoothed[bp:].mean()
+            shift = abs(after - before)
+            if shift > best_shift:
+                best_shift = shift
+                best_bp = bp
 
     if best_bp is None:
         return ChangePointResult(
