@@ -6,9 +6,17 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
     """
     Fetches the nearest Sentinel-2 clear image url before or after a target date.
     """
-    # Ensure ee is initialized. If sar_fetch already initialized it, this won't throw.
+    # Ensure ee is initialized with the service account key if available
     try:
-        ee.Initialize(project="satellite-hackathon-505804")
+        key_str = os.environ.get("GEE_SERVICE_ACCOUNT_KEY")
+        if key_str:
+            # We must use json.loads since the env var is a JSON string
+            import json
+            key_data = json.loads(key_str)
+            credentials = ee.ServiceAccountCredentials(key_data.get('client_email', ''), key_data=key_str)
+            ee.Initialize(credentials, project="satellite-hackathon-505804")
+        else:
+            ee.Initialize(project="satellite-hackathon-505804")
     except Exception:
         pass
 

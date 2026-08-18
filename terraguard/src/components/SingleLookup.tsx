@@ -346,7 +346,7 @@ export default function AnalysisPanel() {
           {aiSummary && (
             <div style={{ marginTop: '24px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
               <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
-              <p className="t-body" style={{ color: 'var(--body)' }}>{aiSummary}</p>
+              <p className="t-body" style={{ color: 'var(--body)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary}</p>
             </div>
           )}
 
