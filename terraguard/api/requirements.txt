@@ -5,3 +5,4 @@ ruptures
 python-dotenv
 google-generativeai
 requests
+Pillow

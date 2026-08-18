@@ -40,6 +40,14 @@ export default function AnalysisPanel() {
   const [aiParsing, setAiParsing] = useState(false);
   const [nlMessage, setNlMessage] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  
+  // Optical verification layer state
+  const [opticalData, setOpticalData] = useState<{
+    before?: { image: string; date: string; offset_days: number };
+    after?: { image: string; date: string; offset_days: number };
+  } | null>(null);
+  const [opticalLoading, setOpticalLoading] = useState(false);
+  const [opticalError, setOpticalError] = useState<string | null>(null);
 
   const handleParseNL = async () => {
     if (!nlQuery.trim()) return;
@@ -114,6 +122,51 @@ export default function AnalysisPanel() {
         if (d.summary) setAiSummary(d.summary);
       })
       .catch(console.error);
+
+      // Request Optical Verification in the background
+      const targetDate = res.change_point.detected_date || res.claimed_date;
+      setOpticalLoading(true);
+      setOpticalData(null);
+      setOpticalError(null);
+      
+      if (process.env.NEXT_PUBLIC_USE_REAL_GEE === 'true') {
+        fetch('/api/optical', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ lat: res.coordinates.lat, lon: res.coordinates.lon, detected_date: targetDate })
+        })
+        .then(async r => {
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error || 'Failed to fetch optical verification');
+          setOpticalData(d);
+        })
+        .catch(err => {
+          setOpticalError(err.message);
+        })
+        .finally(() => {
+          setOpticalLoading(false);
+        });
+      } else {
+        // MOCK MODE FOR LOCAL PREVIEW
+        setTimeout(() => {
+          setOpticalData({
+            before: {
+              image: 'https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=1470&auto=format&fit=crop',
+              date: '2023-01-07',
+              offset_days: -140
+            },
+            after: {
+              image: 'https://images.unsplash.com/photo-1502472584811-0a2f2feb8968?q=80&w=1470&auto=format&fit=crop',
+              date: '2023-06-15',
+              offset_days: 18
+            }
+          });
+          setOpticalLoading(false);
+        }, 3000);
+      }
 
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Analysis failed');
@@ -316,6 +369,70 @@ export default function AnalysisPanel() {
                 background: 'var(--canvas-soft)',
               }}>{tag}</span>
             ))}
+          </div>
+
+
+          {/* OPTICAL VERIFICATION LAYER */}
+          <div className="hairline" style={{ margin: '40px 0' }} />
+          <div>
+            <h3 className="t-display-sm" style={{ marginBottom: '8px' }}>Optical Verification (if available)</h3>
+            <p className="t-body" style={{ color: 'var(--mute)', marginBottom: '24px' }}>
+              Sentinel-2 true-color imagery before and after the detected event.
+            </p>
+            
+            {opticalLoading && (
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="skeleton" style={{ flex: 1, aspectRatio: '1', borderRadius: '8px' }} />
+                <div className="skeleton" style={{ flex: 1, aspectRatio: '1', borderRadius: '8px' }} />
+              </div>
+            )}
+            
+            {opticalError && !opticalLoading && (
+              <div className="verdict-flag verdict-red">
+                <Warning size={14} weight="bold" /> Optical verification failed: {opticalError}
+              </div>
+            )}
+            
+            {!opticalLoading && !opticalError && opticalData && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {opticalData.before ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <img src={opticalData.before.image} alt="Before" style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--hairline-strong)' }} />
+                    <div className="t-micro-cap" style={{ textAlign: 'center', color: 'var(--ink)' }}>
+                      BEFORE — {opticalData.before.date}
+                    </div>
+                    <div className="t-caption" style={{ textAlign: 'center' }}>
+                      {Math.abs(opticalData.before.offset_days)} days {opticalData.before.offset_days <= 0 ? 'before' : 'after'} target
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '40px 20px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="t-body" style={{ color: 'var(--mute)' }}>No clear imagery available before this date due to cloud cover.</span>
+                  </div>
+                )}
+                
+                {opticalData.after ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <img src={opticalData.after.image} alt="After" style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--hairline-strong)' }} />
+                    <div className="t-micro-cap" style={{ textAlign: 'center', color: 'var(--ink)' }}>
+                      AFTER — {opticalData.after.date}
+                    </div>
+                    <div className="t-caption" style={{ textAlign: 'center' }}>
+                      {Math.abs(opticalData.after.offset_days)} days {opticalData.after.offset_days <= 0 ? 'before' : 'after'} target
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '40px 20px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="t-body" style={{ color: 'var(--mute)' }}>No clear imagery available after this date due to cloud cover.</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {!opticalLoading && !opticalError && !opticalData && (
+              <div style={{ padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline)', textAlign: 'center' }}>
+                <span className="t-body" style={{ color: 'var(--mute)' }}>Optical imagery not requested or unavailable.</span>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
