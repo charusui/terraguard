@@ -2,7 +2,7 @@ import ee
 import os
 from datetime import datetime, timedelta
 
-def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direction: str = "before", buffer_meters: int = 300):
+def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direction: str = "before", buffer_meters: int = 1000):
     """
     Fetches the nearest Sentinel-2 clear image url before or after a target date.
     """
@@ -42,12 +42,8 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
         .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
     )
 
-    if direction == "before":
-        # Sort descending to get the one closest to target_date
-        collection = collection.sort("system:time_start", False)
-    else:
-        # Sort ascending to get the one closest to target_date
-        collection = collection.sort("system:time_start", True)
+    # Sort strictly by lowest cloud cover in the 90 day window to avoid clouds blocking the view
+    collection = collection.sort("CLOUDY_PIXEL_PERCENTAGE", True)
 
     image = collection.first()
     
