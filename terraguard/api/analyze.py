@@ -9,9 +9,7 @@ sys.path.insert(0, os.path.join(root_dir, 'backend'))
 
 from http.server import BaseHTTPRequestHandler
 
-from backend.analyze import evaluate_verdict
-from backend.sar_fetch import get_default_date_range, fetch_backscatter
-from backend.change_point import detect_change_point
+from backend.analyze import analyze
 
 
 class handler(BaseHTTPRequestHandler):
@@ -51,38 +49,7 @@ class handler(BaseHTTPRequestHandler):
             lat = float(lat)
             lon = float(lon)
 
-            start_date, end_date = get_default_date_range(claimed_date)
-            df = fetch_backscatter(lat, lon, start_date, end_date)
-            cp_result = detect_change_point(df)
-
-            det_date = cp_result.detected_date.strftime("%Y-%m-%d") if cp_result.detected_date else None
-
-            verdict_info = evaluate_verdict(claimed_date, cp_result.detected_date, cp_result.confidence)
-
-            # Build smoothed series list
-            smoothed_list = []
-            for _, row in cp_result.smoothed_series.iterrows():
-                import math
-                smoothed_val = row.get("smoothed_db")
-                smoothed_list.append({
-                    "date": row["date"].strftime("%Y-%m-%d"),
-                    "backscatter_db": float(row["backscatter_db"]),
-                    "smoothed_db": float(smoothed_val) if smoothed_val is not None and not math.isnan(float(smoothed_val)) else None,
-                })
-
-            out = {
-                "project_name": project_name,
-                "coordinates": {"lat": lat, "lon": lon},
-                "claimed_date": claimed_date,
-                "change_point": {
-                    "detected_date": det_date,
-                    "confidence": cp_result.confidence,
-                    "days_difference": verdict_info.get("days_difference"),
-                },
-                "verdict": verdict_info["verdict"],
-                "explanation": verdict_info["explanation"],
-                "series": smoothed_list,
-            }
+            out = analyze(lat, lon, claimed_date, project_name)
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
