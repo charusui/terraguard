@@ -2,3 +2,6 @@ backend/service-account-key.json
 *.json.key
 .env
 .env.local
+
+# Test scripts
+test_backend*.py

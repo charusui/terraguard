@@ -56,8 +56,8 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
     signal = smoothed.reshape(-1, 1)
     try:
         algo = rpt.Pelt(model="rbf").fit(signal)
-        # pen=10 is a strict penalty to ignore false positives in noisy urban environments
-        breakpoints = algo.predict(pen=10)
+        # pen=5 penalty to detect breakpoints in a focused time window
+        breakpoints = algo.predict(pen=5)
         # Pelt always includes len(signal) as last breakpoint — remove it
         breakpoints = [b for b in breakpoints if b < len(signal)]
     except Exception:
@@ -71,31 +71,18 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
             breakpoint_index=None,
         )
 
-    # Take the earliest breakpoint that has a significant shift (>0.5 dB)
+    # Take the breakpoint with the largest significant shift (> 0.35 dB)
     best_bp = None
     best_shift = 0.0
     for bp in breakpoints:
         if bp < 2 or bp > len(signal) - 2:
             continue
-        before = smoothed[:bp].mean()
-        after = smoothed[bp:].mean()
+        before = smoothed[max(0, bp-15):bp].mean()
+        after = smoothed[bp:min(len(smoothed), bp+15)].mean()
         shift = abs(after - before)
         
-        # If this shift is significant, take it as the FIRST construction event and stop looking
-        if shift > 0.5:
-            best_shift = shift
-            best_bp = bp
-            break
-            
-    # If no breakpoint exceeded 0.5, just take the largest one to fall through to the minimums check
-    if best_bp is None and breakpoints:
-        for bp in breakpoints:
-            if bp < 2 or bp > len(signal) - 2:
-                continue
-            before = smoothed[:bp].mean()
-            after = smoothed[bp:].mean()
-            shift = abs(after - before)
-            if shift > best_shift:
+        if shift > 0.35:
+            if best_bp is None or shift > best_shift:
                 best_shift = shift
                 best_bp = bp
 
@@ -108,8 +95,8 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         )
 
     # --- Significance thresholds ---
-    # 0.5 dB threshold to detect real structural changes (which typically range from 0.7 - 1.5 dB)
-    MIN_SHIFT_DB = 0.5
+    # 0.35 dB threshold to detect real structural changes (which typically range from 0.7 - 1.5 dB)
+    MIN_SHIFT_DB = 0.35
     MIN_CONFIDENCE = 0.3
 
     overall_variance = smoothed.std()

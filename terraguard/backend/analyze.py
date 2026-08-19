@@ -85,7 +85,21 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
     try:
         df = fetch_backscatter(lat, lon, start_date, end_date)
     except ValueError as e:
-        return {"error": str(e)}
+        # E.g., if there is no Sentinel-1 data for the historical period
+        verdict_data = evaluate_verdict(claimed_date, None, 0.0)
+        return {
+            "series": [],
+            "change_point": {
+                "detected_date": None,
+                "confidence": 0.0,
+                "days_difference": None,
+            },
+            "verdict": verdict_data["verdict"],
+            "explanation": verdict_data["explanation"],
+            "claimed_date": claimed_date,
+            "coordinates": {"lat": lat, "lon": lon},
+            "project_name": project_name,
+        }
 
     result = detect_change_point(df)
 

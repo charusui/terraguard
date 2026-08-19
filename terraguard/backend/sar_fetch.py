@@ -136,10 +136,12 @@ def fetch_backscatter(
 
 def get_default_date_range(claimed_ntp_date: str) -> tuple[str, str]:
     """
-    Returns (start_date, end_date) defaulting to 12 months before claimed NTP
-    through today. Ensures there's a pre-construction baseline.
+    Returns (start_date, end_date) defaulting to 150 days before claimed NTP
+    through 365 days after.
     """
     claimed = datetime.strptime(claimed_ntp_date, "%Y-%m-%d")
-    start = claimed - timedelta(days=365)
-    end = datetime.today()
+    start = claimed - timedelta(days=150)
+    end = claimed + timedelta(days=365)
+    if end > datetime.today():
+        end = datetime.today()
     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
