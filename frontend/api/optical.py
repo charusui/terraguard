@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 
 # Add the parent directory and backend directory to the path
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+root_dir = os.path.dirname(frontend_dir)
 sys.path.insert(0, root_dir)
 sys.path.insert(0, os.path.join(root_dir, 'backend'))
 

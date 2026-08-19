@@ -4,8 +4,9 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "functions": {
-    "api/analyze.py": {
-      "maxDuration": 60
+    "api/*.py": {
+      "maxDuration": 60,
+      "includeFiles": "../backend/**"
     }
   }
 }

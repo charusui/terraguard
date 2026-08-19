@@ -7,3 +7,7 @@ backend/service-account-key.json
 test_*.py
 
 .agents/
+
+# Local agent/tooling config — personal, never shared
+.claude/
+.impeccable/
