@@ -29,10 +29,10 @@ TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF co
 ## Local Setup
 
 1. **Install Python dependencies:**
-   \`\`\`bash
-   cd backend
-   pip install -r requirements.txt # (or install ee, pandas, ruptures, python-dotenv manually)
-   \`\`\`
+   ```bash
+   cd terraguard/api
+   pip install -r requirements.txt
+   ```
 
 2. **Install Node dependencies:**
    \`\`\`bash

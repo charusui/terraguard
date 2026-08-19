@@ -37,45 +37,63 @@ def get_nearest_clear_image(lat: float, lon: float, target_date_str: str, direct
     point = ee.Geometry.Point([lon, lat])
     buffered = point.buffer(buffer_meters)
 
-    collection = (
-        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-        .filterBounds(buffered)
-        .filterDate(start_str, end_str)
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40))
-    )
+    collections = [
+        {"name": "COPERNICUS/S2_SR_HARMONIZED", "bands": ['B4', 'B3', 'B2'], "is_s2": True, "cloud_filter": "CLOUDY_PIXEL_PERCENTAGE"}
+    ]
 
-    first_img = collection.first()
+    arr = None
+    is_s2_match = False
     
-    # We must use getInfo() carefully
-    try:
-        info = first_img.getInfo()
-        if not info:
-            return None
-    except Exception:
+    for coll in collections:
+        collection = (
+            ee.ImageCollection(coll["name"])
+            .filterBounds(buffered)
+            .filterDate(start_str, end_str)
+            .filter(ee.Filter.lt(coll["cloud_filter"], 40))
+        )
+        
+        first_img = collection.first()
+        try:
+            info = first_img.getInfo()
+            if not info:
+                continue
+        except Exception:
+            continue
+            
+        proj = first_img.select(coll["bands"][0]).projection()
+        image = collection.median().setDefaultProjection(proj)
+        
+        try:
+            arr = image.select(coll["bands"]).sampleRectangle(region=buffered).getInfo()
+            is_s2_match = coll["is_s2"]
+            bands = coll["bands"]
+            break
+        except Exception:
+            continue
+
+    if not arr:
         return None
 
-    # Use a median composite to eliminate clouds completely
-    # We MUST use setDefaultProjection from the first image, otherwise sampleRectangle returns a solid block!
-    proj = first_img.select('B4').projection()
-    image = collection.median().setDefaultProjection(proj)
-
     date_str = display_date.strftime("%Y-%m-%d")
-    
+
     try:
-        # Fetch raw pixel array directly using getInfo()
-        arr = image.select(['B4', 'B3', 'B2']).sampleRectangle(region=buffered).getInfo()
-        
-        # Convert to PNG bytes using Pillow & Numpy
         from PIL import Image
         import numpy as np
         import io
         
-        b4 = np.array(arr['properties']['B4'])
-        b3 = np.array(arr['properties']['B3'])
-        b2 = np.array(arr['properties']['B2'])
+        b_red = np.array(arr['properties'][bands[0]])
+        b_green = np.array(arr['properties'][bands[1]])
+        b_blue = np.array(arr['properties'][bands[2]])
         
-        rgb = np.dstack((b4, b3, b2))
-        rgb = np.clip(rgb / 3000.0, 0, 1) * 255
+        rgb = np.dstack((b_red, b_green, b_blue))
+        
+        if is_s2_match:
+            # Sentinel-2 SR is 0-10000
+            rgb = np.clip(rgb / 3000.0, 0, 1) * 255
+        else:
+            # Landsat TOA is 0.0-1.0
+            rgb = np.clip(rgb * 2.5, 0, 1) * 255
+            
         rgb = rgb.astype(np.uint8)
         
         img = Image.fromarray(rgb).resize((512, 512), Image.Resampling.LANCZOS)

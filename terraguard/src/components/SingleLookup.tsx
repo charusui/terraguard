@@ -7,11 +7,7 @@ import { useState } from 'react';
 import VerdictBanner from './VerdictBanner';
 import SARChart from './SARChart';
 
-const SCENARIOS: Record<string, VerdictType> = {
-  [KNOWN_CASES[0].name]: 'PRE_EXISTING',
-  [KNOWN_CASES[1].name]: 'PRE_EXISTING',
-  [KNOWN_CASES[2].name]: 'NO_CHANGE_DETECTED',
-};
+
 
 const PROGRESS_STEPS = [
   'Initializing GEE session...',
@@ -88,12 +84,11 @@ export default function AnalysisPanel() {
   const handleAnalyze = async () => {
     setLoading(true); setResult(null); setError(null); setProgressStep(0); setAiSummary(null);
     try {
-      let finalLat: number, finalLon: number, finalDate: string, finalName: string, scenario: VerdictType | undefined;
+      let finalLat: number, finalLon: number, finalDate: string, finalName: string;
       if (mode === 'known') {
         const kase = KNOWN_CASES.find(c => c.name === selectedCase)!;
         finalLat = kase.lat; finalLon = kase.lon;
         finalDate = kase.claimed_ntp_date; finalName = kase.name;
-        scenario = SCENARIOS[selectedCase];
       } else {
         finalLat = parseFloat(lat); finalLon = parseFloat(lon);
         finalDate = claimedDate; finalName = projectName || 'Custom Lookup';
@@ -104,7 +99,7 @@ export default function AnalysisPanel() {
         await new Promise(r => setTimeout(r, 400));
         setProgressStep(i);
       }
-      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName, scenario);
+      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName);
       setResult(res);
       
       // Request AI summary in the background

@@ -13,11 +13,7 @@ def process_optical_image(pixels: bytes, enable_ai: bool = False) -> str:
     """
     img = Image.open(io.BytesIO(pixels)).convert("RGB")
     
-    # Draw anchor circle in the dead center
-    draw = ImageDraw.Draw(img)
-    cx, cy = img.width // 2, img.height // 2
-    radius = 40
-    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), outline="red", width=3)
+    # We skip Gemini call since it was proven unreliable on 10m/px crops in validation phase.
     
     # We skip Gemini call since it was proven unreliable on 10m/px crops in validation phase.
     

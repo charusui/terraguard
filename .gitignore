@@ -4,4 +4,6 @@ backend/service-account-key.json
 .env.local
 
 # Test scripts
-test_backend*.py
+test_*.py
+
+.agents/
