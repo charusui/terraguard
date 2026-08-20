@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Broadcast } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import ThemeToggle from './ThemeToggle';
+
+import logo from '../assets/logo.png';
 
 export default function GlobalNav() {
   const pathname = usePathname();
@@ -12,8 +14,8 @@ export default function GlobalNav() {
   return (
     <nav className="nav-overlay" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       {/* Left: Logo */}
-      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-        <Broadcast size={20} color="var(--ink)" weight="fill" />
+      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '2px', textDecoration: 'none', height: '40px', width: '40px'}}>
+        <Image src = {logo} alt="TerraGuard logo"/>
         <span style={{
           fontFamily: 'var(--font-display)',
           fontSize: '18px',

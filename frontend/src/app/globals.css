@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────
@@ -27,10 +28,10 @@
   --warning: #f5a623;
   --warning-soft: #ffefcf;
 
-  /* Typography — Geist */
-  --font-display: var(--font-geist-sans), -apple-system, sans-serif;
-  --font-body: var(--font-geist-sans), -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  /* Typography */
+  --font-display: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-body: "Roboto", -apple-system, sans-serif;
+  --font-mono: ui-monospace, monospace;
 }
 
 [data-theme='dark'] {
@@ -293,14 +294,82 @@ body {
 /* ── Section dark ── (repurposed to soft gray) */
 .section-dark { background: var(--canvas-soft); }
 
+/* ── How-it-works row ── plain CSS hover, not framer-motion, so background-
+   color and icon color transition smoothly without animating a CSS custom
+   property through motion's color interpolator (which can't parse var()
+   and renders a broken half-transparent frame). ── */
+.how-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 48px;
+  padding: 44px 24px;
+  margin: 0 -24px;
+  border-radius: 12px;
+  transition: background-color 0.25s ease;
+}
+
+.how-row:hover { background: var(--canvas-soft); }
+
+.how-row + .how-row { border-top: 1px solid var(--hairline); }
+
+.how-row-icon {
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+  color: var(--mute);
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.how-row:hover .how-row-icon {
+  color: var(--ink);
+  transform: translateX(4px);
+}
+
+.how-row-icon svg { width: 100%; height: 100%; display: block; }
+
+@media (max-width: 640px) {
+  .how-row { grid-template-columns: 1fr; gap: 20px; padding: 32px 16px; margin: 0 -16px; }
+  .how-row-icon { width: 56px; height: 56px; }
+}
+
 /* ── Stat number ── */
 .stat-num {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(32px, 4vw, 48px);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
   line-height: 1;
+}
+
+/* ── Stats band ── clean column layout, dividers instead of filled blocks */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-item {
+  padding: 8px 32px;
+  border-left: 1px solid var(--hairline);
+}
+
+.stat-item:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+@media (max-width: 768px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); row-gap: 32px; }
+  .stat-item:nth-child(2n+1) { padding-left: 0; border-left: none; }
+  .stat-item:nth-child(n+3) { border-top: 1px solid var(--hairline); padding-top: 24px; }
+}
+
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns: 1fr; row-gap: 24px; }
+  .stat-item { padding-left: 0 !important; border-left: none !important; }
+  .stat-item:not(:first-child) { border-top: 1px solid var(--hairline); padding-top: 24px; }
 }
 
 /* ── Animations ── */
@@ -317,6 +386,117 @@ body {
 .delay-2 { animation-delay: 0.2s; opacity: 0; }
 .delay-3 { animation-delay: 0.3s; opacity: 0; }
 .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+/* ── Hero card ambient glow ── three color blobs breathing independently
+   behind the preview card, Antigravity-style. Pure CSS (not framer-motion)
+   since it's decorative/ambient, not tied to page state — keeps it cheap
+   and lets prefers-reduced-motion turn it into a static soft halo. */
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50%      { opacity: 0.75; transform: scale(1.12); }
+}
+
+.hero-glow-wrap {
+  position: relative;
+  width: 100%;
+  isolation: isolate;
+}
+
+.hero-glow-card { position: relative; z-index: 1; }
+
+.hero-glow {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+  animation: glow-breathe 7s ease-in-out infinite;
+}
+
+.hero-glow-left {
+  top: 38%;
+  left: -48px;
+  width: 200px;
+  height: 200px;
+  background: #00a8ff;
+  animation-delay: 0s;
+}
+
+.hero-glow-right {
+  top: 22%;
+  right: -56px;
+  width: 220px;
+  height: 220px;
+  background: #ff2d55;
+  animation-duration: 8s;
+  animation-delay: 1.6s;
+}
+
+.hero-glow-top {
+  top: -64px;
+  left: 50%;
+  margin-left: -120px;
+  width: 240px;
+  height: 160px;
+  background: #ffd60a;
+  animation-duration: 6.5s;
+  animation-delay: 3.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-glow { animation: none; opacity: 0.5; transform: none; }
+}
+
+/* ── Page ambient glow ── same breathing halo as the hero card, scaled up
+   and fixed to the viewport so it reads as ambient light behind a whole
+   page (e.g. the dashboard) rather than a spotlight on one element. */
+.page-glow-wrap { position: relative; isolation: isolate; }
+
+.page-glow {
+  position: fixed;
+  z-index: -1;
+  display: block;
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: glow-breathe 9s ease-in-out infinite;
+}
+
+.page-glow-left {
+  top: 8%;
+  left: -180px;
+  width: 420px;
+  height: 420px;
+  background: #00a8ff;
+  animation-delay: 0s;
+}
+
+.page-glow-right {
+  top: 2%;
+  right: -200px;
+  width: 460px;
+  height: 460px;
+  background: #ff2d55;
+  animation-duration: 10s;
+  animation-delay: 1.8s;
+}
+
+.page-glow-top {
+  top: -220px;
+  left: 50%;
+  margin-left: -260px;
+  width: 520px;
+  height: 340px;
+  background: #ffd60a;
+  animation-duration: 8s;
+  animation-delay: 3.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-glow { animation: none; opacity: 0.26; transform: none; }
+}
 
 /* ── Skeleton shimmer ── */
 @keyframes shimmer {
