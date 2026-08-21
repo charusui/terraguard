@@ -45,7 +45,7 @@ export default function SARChart({ result }: { result: AnalysisResult }) {
     <div>
       {/* Explainer */}
       <div style={{ marginBottom: '24px' }}>
-        <div className="t-body" style={{ color: 'var(--body)' }}>
+        <div className="t-body" style={{ color: 'var(--body)', fontFamily: "'Roboto', sans-serif" }}>
           This chart tracks <strong>radar surface roughness</strong> over time. A sudden permanent shift in the signal indicates when ground was broken.
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function SARChart({ result }: { result: AnalysisResult }) {
               background: l.dashed ? 'none' : l.color,
               borderTop: l.dashed ? `2px dashed ${l.color}` : 'none',
             }} />
-            <span style={{ fontSize: '12px', color: 'var(--mute)', fontWeight: 500 }}>{l.label}</span>
+            <span style={{ fontSize: '12px', color: 'var(--mute)', fontWeight: 500, fontFamily: "'Roboto', sans-serif" }}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -105,10 +105,10 @@ export default function SARChart({ result }: { result: AnalysisResult }) {
               />
             )}
             <ReferenceLine x={claimed_date} stroke="var(--mute)" strokeDasharray="4 4" strokeWidth={1.5}
-              label={{ value: 'NTP', fill: 'var(--mute)', fontSize: 11, fontWeight: 500, position: 'top', dy: -10 }} />
+              label={{ value: 'NTP', fill: 'var(--mute)', fontSize: 11, fontWeight: 500, fontFamily: "'Roboto', sans-serif", position: 'top', dy: -10 }} />
             {change_point.detected_date && (
               <ReferenceLine x={change_point.detected_date} stroke={changeColor} strokeWidth={2}
-                label={{ value: `Δ ${Math.round(change_point.confidence * 100)}%`, fill: changeColor, fontSize: 11, fontWeight: 600, position: 'top', dy: -10 }} />
+                label={{ value: `Δ ${Math.round(change_point.confidence * 100)}%`, fill: changeColor, fontSize: 11, fontWeight: 600, fontFamily: "'Roboto', sans-serif", position: 'top', dy: -10 }} />
             )}
           </LineChart>
         </ResponsiveContainer>
@@ -127,6 +127,7 @@ export default function SARChart({ result }: { result: AnalysisResult }) {
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
+          fontFamily: "'Roboto', sans-serif"
         }}>
           <span style={{ color: changeColor, fontWeight: 600 }}>
             {Math.abs(change_point.days_difference)} days {change_point.days_difference < 0 ? 'before' : 'after'} NTP

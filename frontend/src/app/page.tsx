@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/shared/components/Button';
 
 import logo from '../assets/logo.png';
+import logoLight from '../assets/logo-light-mode.png';
 /* Decorative line-art marks for the "how it works" steps — monochrome,
    colored via currentColor from .how-row-icon so they follow the theme. */
 const SatelliteIcon = () => (
@@ -293,7 +294,10 @@ export default function HomePage() {
         <div className="band-inner" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '40px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: '0 1 200px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Image src={logo} alt="TerraGuard logo" />
+              <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
+                <Image src={logo} alt="" fill sizes="250px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-dark" />
+                <Image src={logoLight} alt="" fill sizes="250px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-light" />
+              </div>
               <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '14px', fontWeight: 600 }}>TerraGuard</span>
             </div>
             <p className="t-caption" style={{ lineHeight: 1.6, fontFamily: "'Roboto', sans-serif" }}>
@@ -305,11 +309,11 @@ export default function HomePage() {
             <div className="t-micro-cap" style={{ fontFamily: "'Roboto', sans-serif" }}>Developers &amp; Researchers</div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[
-                'Viray, Charles R.',
+                'Esguerra, Adrian Nash M.',
                 'Halili, Joshua Emmanuel M.',
-                'Victoria Loven Ponce P.',
-                'Esguerra, Adrian Nash',
-                'Sardeng, Matthew',
+                'Sardeng, Matthew A.',
+                'Viray, Charles Dwayne R.',
+                'Victoria Loven Ponce P. ',
               ].map(name => (
                 <li key={name} style={{ fontFamily: "'Roboto', sans-serif", fontSize: '13.5px', color: 'var(--body)' }}>
                   {name}

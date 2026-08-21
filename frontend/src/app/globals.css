@@ -215,6 +215,21 @@ body {
   border-bottom: 1px solid var(--hairline);
 }
 
+/* ── Logo mark — swaps to the light-mode logo in light theme,
+   crossfading the same way the theme toggle's view-transition does.
+   Positioning isn't set here: wherever a mark uses next/image's `fill`
+   prop it's already absolutely positioned via that prop's own inline
+   style, and the one flow-sized mark (nav and footer both use the dark
+   mark for this) needs to stay in normal flow so it keeps determining
+   the box's natural size — forcing position here would break that. ── */
+.logo-mark { transition: opacity 0.25s ease; pointer-events: none; }
+
+.logo-mark-light { opacity: 1; }
+.logo-mark-dark { opacity: 0; }
+
+[data-theme='dark'] .logo-mark-light { opacity: 0; }
+[data-theme='dark'] .logo-mark-dark { opacity: 1; }
+
 /* ── Section band ── */
 .band {
   position: relative;
@@ -225,6 +240,26 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 40px;
+}
+
+/* ── Dashboard watermark — large faint mark filling empty space beside
+   the form. z-index: -1 so it stays behind the in-flow content that
+   follows it in the DOM (a positioned element with z-index:auto would
+   otherwise paint over normal-flow siblings, not under them). ── */
+.dashboard-watermark {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  width: 300px;
+  height: 300px;
+  color: var(--ink);
+  opacity: 0.06;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-watermark { display: none; }
 }
 
 /* ── Hairline ── */
@@ -239,6 +274,7 @@ body {
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
+  font-family: var(--font-body);
 }
 
 .verdict-red { background: var(--error-soft); border: 1px solid var(--error); color: var(--error); }
@@ -510,6 +546,214 @@ body {
   animation: shimmer 1.6s infinite;
   border-radius: 4px;
 }
+
+/* ── Loading state — pixel-grid loader ── */
+@keyframes pixel-on {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 1; }
+}
+
+@keyframes shimmer-text {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.loading-state { display: inline-flex; align-items: center; gap: 10px; }
+
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 4px);
+  gap: 1.5px;
+  flex-shrink: 0;
+}
+
+.loading-cell {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--ink);
+  opacity: 0.15;
+  animation: pixel-on 650ms ease-in-out infinite;
+}
+
+.loading-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background-image: linear-gradient(90deg, var(--mute) 35%, var(--ink) 50%, var(--mute) 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 1.6s linear infinite;
+}
+
+.loading-elapsed {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-cell { animation: none; opacity: 0.4; }
+  .loading-label { animation: none; -webkit-text-fill-color: var(--mute); color: var(--mute); }
+}
+
+/* ── Thinking state — expandable step trace ── */
+@keyframes thinking-spin { to { transform: rotate(360deg); } }
+
+.thinking-state { display: flex; flex-direction: column; }
+
+.thinking-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.thinking-toggle:hover { background: var(--canvas-soft); }
+
+.thinking-trace {
+  display: grid;
+  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.thinking-trace-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0 2px 3px;
+  margin-top: 4px;
+  border-left: 1px solid var(--hairline);
+  padding-left: 14px;
+}
+
+.thinking-row { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+
+.thinking-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  border: 1.5px solid var(--hairline-strong);
+  flex-shrink: 0;
+}
+
+.thinking-spinner {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 1.5px solid var(--hairline-strong);
+  border-top-color: var(--ink);
+  flex-shrink: 0;
+  animation: thinking-spin 700ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-spinner { animation: none; border-top-color: var(--hairline-strong); }
+}
+
+/* ── Prompt bar — composer for the NL query field ── */
+.prompt-bar { position: relative; width: 100%; }
+
+.prompt-bar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 12px;
+  padding: 12px 12px 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prompt-bar-card:focus-within {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.prompt-bar-textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 160px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.prompt-bar-textarea::placeholder { color: var(--mute); }
+
+.prompt-bar-controls { display: flex; align-items: center; justify-content: space-between; }
+
+.prompt-bar-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.prompt-bar-btn:hover { background: var(--canvas-soft); color: var(--ink); }
+
+.prompt-bar-send {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--on-primary);
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.prompt-bar-send:disabled { background: var(--hairline-strong); color: var(--mute); cursor: not-allowed; }
+.prompt-bar-send:not(:disabled):active { transform: scale(0.92); }
+
+.prompt-bar-menu {
+  position: absolute;
+  left: 0; right: 0; bottom: calc(100% + 8px);
+  z-index: 10;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  animation: fade-up 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.prompt-bar-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.prompt-bar-menu-row.active,
+.prompt-bar-menu-row:hover { background: var(--canvas-soft); }
 
 /* ── Table ── */
 .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
