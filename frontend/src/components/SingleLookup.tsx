@@ -6,8 +6,9 @@ import { type AnalysisResult, KNOWN_CASES, analyzeCoordinate, type VerdictType }
 import { useState } from 'react';
 import VerdictBanner from './VerdictBanner';
 import SARChart from './SARChart';
-
-
+import LoadingState from './LoadingState';
+import ThinkingState from './ThinkingState';
+import PromptBar from './PromptBar';
 
 const PROGRESS_STEPS = [
   'Initializing GEE session...',
@@ -36,6 +37,10 @@ export default function AnalysisPanel() {
   const [aiParsing, setAiParsing] = useState(false);
   const [nlMessage, setNlMessage] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  // Bumped at the start of each parse — remounts ThinkingState so its step
+  // counter and timer reset for the new run without any reset-on-prop-
+  // change logic inside that component.
+  const [parseRunId, setParseRunId] = useState(0);
   
   // Optical verification layer state
   const [opticalData, setOpticalData] = useState<{
@@ -49,6 +54,7 @@ export default function AnalysisPanel() {
     if (!nlQuery.trim()) return;
     setAiParsing(true);
     setNlMessage(null);
+    setParseRunId(id => id + 1);
     try {
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
       const res = await fetch('/api/nl_query', {
@@ -216,27 +222,28 @@ export default function AnalysisPanel() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
             {/* AI Assistant Input */}
-            <div style={{ padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline-strong)' }}>
-              <label className="t-micro-cap" style={{ display: 'block', marginBottom: '12px', color: 'var(--ink)' }}>
+            <div style={{ padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', border: '1px solid var(--hairline-strong)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <label className="t-micro-cap" style={{ color: 'var(--ink)' }}>
                 ASK AI ASSISTANT
               </label>
-              <textarea
-                className="field"
-                placeholder="Describe what you want to investigate (e.g., 'investigate the Manila flood control between 2023-01-01 and 2023-12-31')"
+              <PromptBar
                 value={nlQuery}
-                onChange={e => setNlQuery(e.target.value)}
-                style={{ width: '100%', minHeight: '80px', resize: 'vertical', marginBottom: '12px' }}
-              />
-              <button 
-                className="btn-ghost" 
-                onClick={handleParseNL}
+                onChange={setNlQuery}
+                onSend={handleParseNL}
                 disabled={aiParsing}
-                style={{ opacity: aiParsing ? 0.6 : 1, width: '100%', justifyContent: 'center' }}
-              >
-                {aiParsing ? 'Extracting...' : 'Extract Fields'}
-              </button>
-              {nlMessage && (
-                <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--mute)' }}>
+                knownCaseNames={KNOWN_CASES.map(c => c.name)}
+                placeholder="Describe what you want to investigate (e.g., 'investigate the Manila flood control between 2023-01-01 and 2023-12-31')"
+              />
+              {(aiParsing || nlMessage) && (
+                <ThinkingState
+                  key={parseRunId}
+                  working={aiParsing}
+                  steps={['Reading your query', 'Extracting location & dates', 'Geocoding the location', 'Filling in the form']}
+                  activeLabel="Extracting fields"
+                />
+              )}
+              {nlMessage && !aiParsing && (
+                <div style={{ fontSize: '12px', color: 'var(--mute)' }}>
                   {nlMessage}
                 </div>
               )}
@@ -289,15 +296,7 @@ export default function AnalysisPanel() {
           animate={{ opacity: 1 }}
           style={{ padding: '48px 0', display: 'flex', flexDirection: 'column', gap: '24px' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: 'var(--ink)',
-            }} />
-            <span className="t-micro-cap" style={{ color: 'var(--ink)' }}>
-              {PROGRESS_STEPS[progressStep]}
-            </span>
-          </div>
+          <LoadingState label={PROGRESS_STEPS[progressStep]} />
           {/* Progress track */}
           <div style={{ height: '2px', background: 'var(--canvas-soft-2)', position: 'relative', maxWidth: '400px', borderRadius: '2px', overflow: 'hidden' }}>
             <div style={{
@@ -340,17 +339,17 @@ export default function AnalysisPanel() {
           
           <div className="hairline" style={{ margin: '40px 0' }} />
           <div style={{ marginBottom: '16px' }}>
-            <p className="t-micro-cap" style={{ color: 'var(--mute)', marginBottom: '4px' }}>
+            <p className="t-micro-cap" style={{ color: 'var(--mute)', marginBottom: '4px', fontFamily: "'Roboto', sans-serif" }}>
               Sentinel-1 VV Backscatter · IW Mode · 30 m Buffer
             </p>
           </div>
           <SARChart result={result} />
-          
+
           <div className="hairline" style={{ margin: '40px 0' }} />
-          
+
           {/* Explanation (Top 3 possibilities) */}
           <div style={{ marginBottom: '40px' }}>
-            <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap' }}>
+            <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap', fontFamily: "'Roboto', sans-serif" }}>
               {result.explanation}
             </p>
           </div>

@@ -1,19 +1,25 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Broadcast } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import ThemeToggle from './ThemeToggle';
 
+import logo from '../assets/logo.png';
+import logoLight from '../assets/logo-light-mode.png';
+
 export default function GlobalNav() {
   const pathname = usePathname();
-  
+
   return (
     <nav className="nav-overlay" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      {/* Left: Logo */}
-      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-        <Broadcast size={20} color="var(--ink)" weight="fill" />
+      {/* Left: Logo — dark-mode and light-mode marks stacked, crossfaded via [data-theme] */}
+      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '2px', textDecoration: 'none', height: '40px', width: '40px'}}>
+        <div style={{ position: 'relative', width: '40px', height: '40px', flexShrink: 0 }}>
+          <Image src={logo} alt="" fill sizes="40px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-dark" />
+          <Image src={logoLight} alt="" fill sizes="40px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-light" />
+        </div>
         <span style={{
           fontFamily: 'var(--font-display)',
           fontSize: '18px',

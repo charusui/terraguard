@@ -44,9 +44,9 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
         </div>
         {result.change_point.detected_date && (
           <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div className="t-micro-cap">Detector Confidence</div>
+            <div className="t-micro-cap" style={{ fontFamily: "'Roboto', sans-serif" }}>Detector Confidence</div>
             <div style={{
-              fontFamily: 'var(--font-mono)',
+              fontFamily: "'IBM Plex Sans', sans-serif",
               fontSize: '32px',
               fontWeight: 600,
               lineHeight: 1,
@@ -56,7 +56,7 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
             }}>
               {Math.round(result.change_point.confidence * 100)}%
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--mute)', maxWidth: '160px', lineHeight: 1.4, marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--mute)', maxWidth: '160px', lineHeight: 1.4, marginTop: '4px', fontFamily: "'Roboto', sans-serif" }}>
               Probability that radar shift represents physical construction
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
 function DataItem({ label, value, mono, accent }: { label: string; value: string; mono?: boolean; accent?: string }) {
   return (
     <div>
-      <div className="t-micro-cap" style={{ marginBottom: '4px' }}>{label}</div>
+      <div className="t-micro-cap" style={{ marginBottom: '4px', fontFamily: "'Roboto', sans-serif" }}>{label}</div>
       <div style={{
         fontSize: '14px',
         fontWeight: 500,
