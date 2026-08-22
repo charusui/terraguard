@@ -60,6 +60,14 @@
 
 html { scroll-behavior: smooth; font-size: 16px; }
 
+/* Smooth scrolling covers in-page anchors and programmatic scrollTo/scrollIntoView.
+   It deliberately does not touch wheel or trackpad scrolling — the browser owns that.
+   Route transitions opt out of it via data-scroll-behavior="smooth" on <html>
+   (see layout.tsx), so navigating to a new page still jumps instantly to the top. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
 body {
   background: var(--canvas);
   color: var(--ink);
@@ -215,6 +223,84 @@ body {
   border-bottom: 1px solid var(--hairline);
 }
 
+/* ── Auto-hiding nav, below md only. On a phone the bar slides out of the way
+   while reading and returns the moment the user scrolls up, so the links are
+   always one swipe away instead of a trip back to the top of the page.
+   Above md the nav never translates — the rules simply don't apply there. */
+@media (max-width: 47.999rem) {
+  .nav-overlay {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav-overlay.nav-hidden {
+    /* 1px of slack so the bottom hairline doesn't peek on fractional DPRs. */
+    transform: translateY(calc(-100% - 1px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-overlay { transition: none; }
+}
+
+/* ── Mobile nav menu — hamburger toggle + dropdown, revealed below md.
+   The breakpoint is owned here rather than by Tailwind's `md:hidden`: the
+   universal reset at the top of this file is unlayered, and unlayered CSS beats
+   anything in a @layer whatever the specificity, so putting these rules in a
+   layer to let `md:hidden` win also let `* { padding: 0 }` win — which flattened
+   the dropdown's padding. Plain rules plus an explicit media query keep both the
+   padding and the breakpoint intact. */
+.nav-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--canvas-soft);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.nav-menu-btn:hover { background: var(--canvas-soft-2); }
+.nav-menu-btn:active { transform: scale(0.92); }
+
+.nav-mobile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 16px;
+  left: 16px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* The only place either element is visible. */
+@media (max-width: 47.999rem) {
+  .nav-menu-btn { display: flex; }
+  .nav-mobile-menu { display: flex; }
+}
+
+.nav-mobile-link {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--body);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-mobile-link:hover { background: var(--canvas-soft); color: var(--ink); }
+.nav-mobile-link.active { background: var(--canvas-soft-2); color: var(--ink); }
+
 /* ── Logo mark — swaps to the light-mode logo in light theme,
    crossfading the same way the theme toggle's view-transition does.
    Positioning isn't set here: wherever a mark uses next/image's `fill`
@@ -242,24 +328,83 @@ body {
   padding: 0 40px;
 }
 
-/* ── Dashboard watermark — large faint mark filling empty space beside
-   the form. z-index: -1 so it stays behind the in-flow content that
-   follows it in the DOM (a positioned element with z-index:auto would
-   otherwise paint over normal-flow siblings, not under them). ── */
-.dashboard-watermark {
-  position: absolute;
-  top: -8px;
-  right: 0;
-  width: 300px;
-  height: 300px;
-  color: var(--ink);
-  opacity: 0.06;
-  z-index: -1;
+/* ── Panel mark — large graphic occupying the right column beside a
+   panel's content. A real flex sibling and part of the layout, not an
+   absolutely-positioned overlay or a faded watermark — plain CSS
+   (no framer-motion/JS), so it's in the very first paint every time,
+   never dependent on client JS finishing before it's visible. ── */
+.panel-mark {
+  position: relative;
+  z-index: 1;
+  width: 320px;
+  height: 320px;
+  flex-shrink: 0;
+  color: #000000;
   pointer-events: none;
 }
 
-@media (max-width: 1100px) {
-  .dashboard-watermark { display: none; }
+/* pure white/black per theme, not the softer var(--ink) token */
+[data-theme='dark'] .panel-mark { color: #ffffff; }
+
+/* wraps the mark plus its glow — the glow blobs below position
+   themselves relative to this box */
+.panel-mark-wrap {
+  position: relative;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+@media (max-width: 900px) {
+  .panel-mark-wrap { display: none; }
+}
+
+/* ── Panel mark glow — a scaled-down, contained version of the hero
+   card's glow (.hero-glow-*): smaller blobs sitting inside the wrap's
+   own bounds rather than bleeding past its edges into the form beside
+   it. Kept as its own rule set rather than reusing .hero-glow-* so
+   that card's larger sizing stays untouched. ── */
+.panel-glow {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  border-radius: 9999px;
+  filter: blur(36px);
+  pointer-events: none;
+  animation: glow-breathe 7s ease-in-out infinite;
+}
+
+.panel-glow-left {
+  top: 42%;
+  left: 55px;
+  width: 105px;
+  height: 105px;
+  background: #00a8ff;
+  animation-delay: 0s;
+}
+
+.panel-glow-right {
+  top: 32%;
+  right: 55px;
+  width: 120px;
+  height: 120px;
+  background: #ff2d55;
+  animation-duration: 8s;
+  animation-delay: 1.6s;
+}
+
+.panel-glow-top {
+  top: 40px;
+  left: 50%;
+  margin-left: -65px;
+  width: 130px;
+  height: 90px;
+  background: #ffd60a;
+  animation-duration: 6.5s;
+  animation-delay: 3.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-glow { animation: none; opacity: 0.5; transform: none; }
 }
 
 /* ── Hairline ── */
@@ -289,7 +434,7 @@ body {
   border-radius: 6px;
   padding: 12px 16px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px; /* not 14px — under 16px triggers iOS Safari's zoom-on-focus */
   font-weight: 400;
   color: var(--ink);
   outline: none;
@@ -306,6 +451,122 @@ body {
   background: var(--canvas);
   color: var(--ink);
 }
+
+/* icon button tucked inside a field, e.g. the password show/hide toggle.
+   Position lives here (not as an inline style on the element) so the
+   :active transform below can compose with it — an inline `transform`
+   would otherwise always beat the stylesheet, pseudo-class or not. */
+.field-icon-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.field-icon-btn:hover { background: var(--canvas-soft); color: var(--ink); }
+.field-icon-btn:active { transform: translateY(-50%) scale(0.92); }
+
+/* ── Select — Radix-driven, styled to match .field / the prompt-bar
+   menus, since a native <select>'s open popup is unstylable OS chrome ── */
+.select-trigger {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ink);
+  text-align: left; /* Radix's Trigger renders a <button> — the UA default centers its text */
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.select-trigger-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.select-trigger[data-placeholder] { color: var(--mute); }
+.select-trigger:focus,
+.select-trigger[data-state='open'] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.select-trigger-icon {
+  flex-shrink: 0;
+  color: var(--mute);
+  transition: transform 0.2s ease;
+}
+
+.select-trigger[data-state='open'] .select-trigger-icon { transform: rotate(180deg); }
+
+.select-content {
+  width: var(--radix-select-trigger-width);
+  max-height: var(--radix-select-content-available-height, 320px);
+  z-index: 200;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.select-content[data-state='open'] { animation: select-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.select-content[data-state='closed'] { animation: select-out 100ms ease-in both; }
+
+@keyframes select-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes select-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.select-viewport { padding: 4px; }
+
+.select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.select-item[data-highlighted] { background: var(--canvas-soft); }
+.select-item[data-state='checked'] { background: var(--canvas-soft-2); font-weight: 500; }
+
+.select-item-indicator { flex-shrink: 0; color: var(--ink); }
 
 /* ── Tab pill ── */
 .tab-pill {
@@ -326,6 +587,7 @@ body {
 }
 
 .tab-pill:not(.active):hover { background: var(--canvas-soft); color: var(--ink); }
+.tab-pill:active { transform: scale(0.96); }
 
 /* ── Section dark ── (repurposed to soft gray) */
 .section-dark { background: var(--canvas-soft); }
@@ -687,7 +949,7 @@ body {
   background: transparent;
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px; /* not 14px — under 16px triggers iOS Safari's zoom-on-focus */
   line-height: 1.5;
   box-sizing: border-box;
 }
