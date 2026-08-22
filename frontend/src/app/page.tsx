@@ -20,6 +20,40 @@ const CompareIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" viewBox="0 0 161 130"><path d="M17.5 8C14 9.4 9.2 15.4 8 19.7q-2.2 9.2 4.9 16.4a16 16 0 0 0 26.4-5.2l2.2-5 10 .3c8.4.3 10.7.8 14.5 2.8a21 21 0 0 1 10.1 13.4c3.4 12.6 7.5 18.8 15.3 22.9 3.6 1.9 6.3 2.2 23.1 2.7 20.6.7 23.6 1.4 26.1 6.1 2.5 4.9 1.2 19.9-1.7 19.9-.6 0-2.4-1-4-2.3-2.3-1.7-4.4-2.2-8.8-2.2-7.7 0-13.2 3.5-15.6 9.9l-1.7 4.5-9.7.3c-7.7.2-9.6.6-9.6 1.8s1.8 1.6 9.5 1.8l9.5.3 1.9 4.5a16.7 16.7 0 0 0 28 4.7c3-3.3 4.9-10.7 3.8-14.8-.7-2.4-.3-4 1.7-7.9 3.3-6.5 3.6-17.3.5-22.6-3.8-6.6-6.6-7.4-27.9-8-20.5-.6-23.9-1.4-29.2-7.2A32 32 0 0 1 81 43.5a31 31 0 0 0-6.8-13.8c-5.2-5.6-9.7-7.1-21.9-7.5-11.1-.4-11.1-.4-11.8-3.1-.9-3.6-5.1-8.8-8.5-10.6A24 24 0 0 0 17.5 8m13.3 5c4.1 2.5 6.6 8.1 5.8 12.9-.7 4.3-5.9 9.9-10.1 10.7C16 38.5 8.2 25.9 14.3 16.9c4.1-6.1 10.5-7.6 16.5-3.9m101.5 82.2c3 1.6 5.7 7 5.7 11.6 0 3.7-.6 5-3.3 7.7-4.3 4.3-7.9 5.2-13.1 3.4-3.3-1.1-4.6-2.3-6.4-6.1-2.7-5.4-2.4-9 1-13.4a12.6 12.6 0 0 1 16.1-3.2M136.5 9c-.9 1.4.8 3.9 5.5 8.5l4.1 4-28.3.5c-24.3.4-28.3.7-28.3 2s3.9 1.5 28.5 1.8l28.4.2-5.4 5.5c-5.1 5.2-5.3 5.6-3.7 7.2s2.1 1.3 9.2-6.2c4.1-4.4 7.4-8.3 7.2-8.7-.1-.3-3.3-4.1-7-8.2-6.5-7.3-8.9-8.8-10.2-6.6M15.7 98a37 37 0 0 0-6.7 8.2A54 54 0 0 0 24.3 121c3 0 1.8-3.3-3-8.2l-4.7-4.8h27c14.9 0 27.3-.3 27.7-.6q.4-.6 0-2c-.4-1.2-5.3-1.4-27.6-1.4H16.6l4.7-4.8c2.6-2.6 4.7-5.5 4.7-6.5 0-3.5-3.8-1.5-10.3 5.3"></path></svg>
 );
 
+/* Stats band icons — stroked line-art, colored via currentColor so they
+   follow the theme like the marks above. */
+const RevisitIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 17c4.5-6 10.5-11 18-13" strokeDasharray="3 3" />
+    <circle cx="4.5" cy="16" r="1.4" />
+    <circle cx="11" cy="10.5" r="2" fill="currentColor" stroke="none" />
+    <circle cx="18" cy="6" r="1.4" />
+  </svg>
+);
+
+const BufferIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.5" strokeDasharray="3 3" />
+    <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+    <path d="M12 12h8.5" />
+  </svg>
+);
+
+const FloorIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 13h18" strokeDasharray="3 2" />
+    <path d="M6 20v-3M10 20v-9M14 20v-5M18 20v-11" />
+  </svg>
+);
+
+const ToleranceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2.5 12h19" />
+    <rect x="7.5" y="7.5" width="9" height="9" rx="2.5" strokeDasharray="3 2" />
+    <path d="M12 5v14" />
+  </svg>
+);
+
 export default function HomePage() {
   const reduce = useReducedMotion();
 
@@ -64,7 +98,7 @@ export default function HomePage() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })}
                 >
                   How it works
                 </Button>
@@ -256,31 +290,67 @@ export default function HomePage() {
 
 
 
-      {/* ─── STATS BAND — divided columns, no filled blocks ─── */}
+      {/* ─── STATS BAND — soft tiles ─── */}
       <section style={{ background: 'var(--canvas)', padding: '0 0 96px 0' }}>
         <div className="band-inner">
           <div className="hairline" style={{ marginBottom: '56px' }} />
-          <div className="stats-row">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            alignItems: 'stretch',
+          }}>
             {[
-              { label: 'Satellite revisit', value: '6–12', unit: 'days', desc: 'Frequency of new satellite imagery.' },
-              { label: 'Buffer radius', value: '30', unit: 'm', desc: 'Scan area around target coordinates.' },
-              { label: 'Confidence floor', value: '30', unit: '%', desc: 'Filters out seasonal vegetation and minor ground shifts to prevent false alarms.' },
-              { label: 'Tolerance', value: '±12', unit: 'days', desc: 'Grace period from contract date.' },
+              { label: 'Satellite revisit', value: '6–12', unit: 'days', desc: 'Frequency of new satellite imagery.', Icon: RevisitIcon },
+              { label: 'Buffer radius', value: '30', unit: 'm', desc: 'Scan area around target coordinates.', Icon: BufferIcon },
+              { label: 'Confidence floor', value: '30', unit: '%', desc: 'Filters out seasonal vegetation and minor ground shifts to prevent false alarms.', Icon: FloorIcon },
+              { label: 'Tolerance', value: '±12', unit: 'days', desc: 'Grace period from contract date.', Icon: ToleranceIcon },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
-                className="stat-item"
                 initial={reduce ? false : { opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-80px' }}
                 transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'var(--canvas-soft)',
+                  border: '1px solid var(--hairline)',
+                  borderRadius: '18px',
+                  padding: '22px',
+                }}
               >
-                <div className="t-micro-cap" style={{ marginBottom: '16px', fontFamily: "'Roboto', sans-serif" }}>{s.label}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px', fontFamily: "'IBM Plex Sans', sans-serif" }}>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '13px',
+                    background: 'var(--canvas)',
+                    border: '1px solid var(--hairline)',
+                    color: 'var(--mute)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '18px',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ width: '19px', height: '19px', display: 'block' }}>
+                    <s.Icon />
+                  </span>
+                </span>
+
+                <div className="t-micro-cap" style={{ marginBottom: '10px', fontFamily: "'Roboto', sans-serif" }}>{s.label}</div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '10px', fontFamily: "'IBM Plex Sans', sans-serif" }}>
                   <span className="stat-num">{s.value}</span>
-                  <span className="t-body" style={{ fontFamily: "'Roboto', sans-serif" }}>{s.unit}</span>
+                  <span style={{ fontSize: '14px', color: 'var(--mute)', fontFamily: "'Roboto', sans-serif" }}>{s.unit}</span>
                 </div>
-                <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--mute)', fontFamily: "'Roboto', sans-serif" }}>
+
+                <p style={{ fontSize: '13px', lineHeight: 1.55, color: 'var(--mute)', fontFamily: "'Roboto', sans-serif", marginTop: 'auto' }}>
                   {s.desc}
                 </p>
               </motion.div>

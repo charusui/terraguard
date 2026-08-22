@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
-import { Broadcast, LockSimple, Eye, EyeSlash } from '@phosphor-icons/react';
+import Image from 'next/image';
+import { motion, useReducedMotion } from 'motion/react';
+import { LockSimple, User, Eye, EyeSlash } from '@phosphor-icons/react';
+
+import logo from '../assets/logo.png';
+import logoLight from '../assets/logo-light-mode.png';
 
 interface LoginScreenProps {
   onSuccess: (token: string) => void;
 }
 
 export default function LoginScreen({ onSuccess }: LoginScreenProps) {
+  const reduce = useReducedMotion();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -56,7 +61,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
       }} />
 
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={reduce ? false : { opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         style={{
@@ -65,10 +70,13 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
           position: 'relative',
         }}
       >
-        {/* Logo */}
+        {/* Logo — the real TerraGuard mark, crossfading with the theme */}
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <Broadcast size={24} color="var(--ink)" weight="fill" />
+            <div style={{ position: 'relative', width: '28px', height: '28px', flexShrink: 0 }}>
+              <Image src={logo} alt="" fill sizes="28px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-dark" />
+              <Image src={logoLight} alt="" fill sizes="28px" style={{ objectFit: 'contain' }} className="logo-mark logo-mark-light" />
+            </div>
             <span style={{
               fontFamily: 'var(--font-display)',
               fontSize: '24px',
@@ -92,7 +100,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
             background: 'var(--canvas)',
             border: '1px solid var(--hairline-strong)',
             borderRadius: '8px',
-            padding: '40px',
+            padding: 'clamp(28px, 7vw, 40px)',
             boxShadow: '0 4px 24px rgba(0,0,0,0.02)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
@@ -103,36 +111,27 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Username */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="t-micro-cap" style={{ color: 'var(--ink)' }}>Username</label>
-                <input
-                  id="tg-username"
-                  type="text"
-                  autoComplete="username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  required
-                  style={{
-                    background: 'var(--canvas)',
-                    border: '1px solid var(--hairline-strong)',
-                    borderRadius: '6px',
-                    padding: '10px 14px',
-                    color: 'var(--ink)',
-                    fontSize: '14px',
-                    fontFamily: 'var(--font-body)',
-                    outline: 'none',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.15s, box-shadow 0.15s',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'var(--ink)'; e.target.style.boxShadow = '0 0 0 1px var(--ink)'; }}
-                  onBlur={e => { e.target.style.borderColor = 'var(--hairline-strong)'; e.target.style.boxShadow = 'none'; }}
-                />
+                <label htmlFor="tg-username" className="t-micro-cap" style={{ color: 'var(--ink)' }}>Username</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={16} color="var(--mute)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    id="tg-username"
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    required
+                    className="field"
+                    style={{ paddingLeft: '40px' }}
+                  />
+                </div>
               </div>
 
               {/* Password */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="t-micro-cap" style={{ color: 'var(--ink)' }}>Password</label>
+                <label htmlFor="tg-password" className="t-micro-cap" style={{ color: 'var(--ink)' }}>Password</label>
                 <div style={{ position: 'relative' }}>
+                  <LockSimple size={16} color="var(--mute)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                   <input
                     id="tg-password"
                     type={showPass ? 'text' : 'password'}
@@ -140,30 +139,14 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     required
-                    style={{
-                      background: 'var(--canvas)',
-                      border: '1px solid var(--hairline-strong)',
-                      borderRadius: '6px',
-                      padding: '10px 40px 10px 14px',
-                      color: 'var(--ink)',
-                      fontSize: '14px',
-                      fontFamily: 'var(--font-body)',
-                      outline: 'none',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.15s, box-shadow 0.15s',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--ink)'; e.target.style.boxShadow = '0 0 0 1px var(--ink)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--hairline-strong)'; e.target.style.boxShadow = 'none'; }}
+                    className="field"
+                    style={{ paddingLeft: '40px', paddingRight: '40px' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(v => !v)}
-                    style={{
-                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mute)',
-                      display: 'flex', alignItems: 'center',
-                    }}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    className="field-icon-btn"
                   >
                     {showPass ? <EyeSlash size={16} /> : <Eye size={16} />}
                   </button>
@@ -173,7 +156,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
               {/* Error */}
               {error && (
                 <motion.p
-                  initial={{ opacity: 0, y: -4 }}
+                  initial={reduce ? false : { opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="t-caption"
                   style={{ color: 'var(--error)', margin: 0 }}

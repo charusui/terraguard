@@ -1,0 +1,104 @@
+/* Primary call-to-action for running an analysis. Deliberately its own component
+   rather than a change to .btn-ghost-accent, which LoginScreen also uses. */
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 26px;
+  border: 1px solid var(--primary);
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  overflow: hidden;
+  /* New stacking context so the glow and sheen can't escape the pill. */
+  isolation: isolate;
+  transition: box-shadow 0.25s ease, background-color 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+.button:hover:not(:disabled) {
+  box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ink);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* Radial highlight that tracks the pointer. Coordinates come from the component
+   as custom properties, so moving the cursor never triggers a React render. */
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    120px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    color-mix(in srgb, var(--on-primary) 26%, transparent),
+    transparent 70%
+  );
+}
+
+.button:hover:not(:disabled) .glow { opacity: 1; }
+
+/* Sweeps once on hover, then loops while a run is in flight so the button
+   reads as busy rather than merely dimmed. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--on-primary) 22%, transparent) 50%,
+    transparent 80%
+  );
+}
+
+.button:hover:not(:disabled) .sheen { animation: analyze-sweep 0.75s ease; }
+.isLoading .sheen { animation: analyze-sweep 1.3s linear infinite; }
+
+@keyframes analyze-sweep {
+  to { transform: translateX(100%); }
+}
+
+.spinner {
+  display: inline-flex;
+  flex-shrink: 0;
+  animation: analyze-spin 0.9s linear infinite;
+}
+
+@keyframes analyze-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Decorative motion only. The spinner keeps turning — it reports live state
+   rather than ornamenting, and a frozen spinner reads as a hung request. */
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .glow {
+    transition: none;
+  }
+
+  .button:hover:not(:disabled) .sheen,
+  .isLoading .sheen {
+    animation: none;
+  }
+}
