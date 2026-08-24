@@ -7,10 +7,18 @@ for a given coordinate and date range.
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load .env from repo root (two levels up from backend/)
-load_dotenv(Path(__file__).parent.parent / ".env")
+# Load .env — try repo root first (local dev), then project root (Vercel).
+# On Vercel env vars are injected by the platform, so this is a no-op there.
+try:
+    from dotenv import load_dotenv
+    _here = Path(__file__).resolve().parent
+    for _candidate in [_here.parent / ".env", _here / ".env"]:
+        if _candidate.exists():
+            load_dotenv(_candidate)
+            break
+except Exception:
+    pass
 
 import ee
 import pandas as pd

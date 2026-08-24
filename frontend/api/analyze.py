@@ -2,15 +2,41 @@ import json
 import sys
 import os
 
-# Add the parent directory and backend directory to the path
-frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = os.path.dirname(frontend_dir)
-sys.path.insert(0, root_dir)
-sys.path.insert(0, os.path.join(root_dir, 'backend'))
+# ---------------------------------------------------------------------------
+# Path setup — must resolve on BOTH local dev AND Vercel's Lambda runtime.
+#
+# Local:  __file__ = <repo>/frontend/api/analyze.py
+#         project_dir  = <repo>/frontend
+#         repo_root    = <repo>           ← backend/ lives here
+#
+# Vercel: __file__ = /var/task/api/analyze.py
+#         project_dir  = /var/task
+#         repo_root    = /var             ← backend/ is NOT here
+#         includeFiles copies backend/ into /var/task/backend/
+#
+# We add both candidate directories so Python finds the modules either way.
+# ---------------------------------------------------------------------------
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+_project_dir = os.path.dirname(_api_dir)
+_repo_root = os.path.dirname(_project_dir)
+
+for _p in [
+    _repo_root,                            # local: <repo>
+    os.path.join(_repo_root, 'backend'),   # local: <repo>/backend
+    _project_dir,                          # Vercel: /var/task
+    os.path.join(_project_dir, 'backend'), # Vercel: /var/task/backend
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from http.server import BaseHTTPRequestHandler
 
-from backend.analyze import analyze
+try:
+    from backend.analyze import analyze
+except ImportError:
+    # Fallback: on some Vercel layouts the modules sit directly on sys.path
+    from analyze import analyze as _raw_analyze
+    analyze = _raw_analyze
 
 
 class handler(BaseHTTPRequestHandler):

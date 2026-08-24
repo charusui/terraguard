@@ -3,15 +3,31 @@ import sys
 import os
 from datetime import datetime
 
-# Add the parent directory and backend directory to the path
-frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = os.path.dirname(frontend_dir)
-sys.path.insert(0, root_dir)
-sys.path.insert(0, os.path.join(root_dir, 'backend'))
+# ---------------------------------------------------------------------------
+# Path setup — must resolve on BOTH local dev AND Vercel's Lambda runtime.
+# See the detailed comment in analyze.py for the full explanation.
+# ---------------------------------------------------------------------------
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+_project_dir = os.path.dirname(_api_dir)
+_repo_root = os.path.dirname(_project_dir)
+
+for _p in [
+    _repo_root,
+    os.path.join(_repo_root, 'backend'),
+    _project_dir,
+    os.path.join(_project_dir, 'backend'),
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from http.server import BaseHTTPRequestHandler
-from backend.optical_fetch import get_nearest_clear_image
-from backend.vision_annotate import process_optical_image
+
+try:
+    from backend.optical_fetch import get_nearest_clear_image
+    from backend.vision_annotate import process_optical_image
+except ImportError:
+    from optical_fetch import get_nearest_clear_image
+    from vision_annotate import process_optical_image
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):

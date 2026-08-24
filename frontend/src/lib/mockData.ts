@@ -173,10 +173,23 @@ export async function analyzeCoordinate(
       body: JSON.stringify({ lat, lon, claimed_date: claimedDate, project_name: projectName }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error ?? 'GEE analysis failed');
+      const text = await res.text();
+      let errorMsg = `GEE analysis failed (HTTP ${res.status})`;
+      try {
+        const err = JSON.parse(text);
+        errorMsg = err.error ?? errorMsg;
+      } catch {
+        // Response was HTML or other non-JSON — use status text
+        errorMsg = `API returned ${res.status}: ${res.statusText}`;
+      }
+      throw new Error(errorMsg);
     }
-    return res.json();
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`API returned invalid JSON: ${text.slice(0, 120)}`);
+    }
   }
 
   // --- Mock / demo mode (no GEE required) ---

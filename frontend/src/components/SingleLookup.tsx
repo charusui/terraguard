@@ -100,7 +100,9 @@ export default function AnalysisPanel() {
         },
         body: JSON.stringify({ action: 'parse', text: nlQuery })
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`API returned non-JSON: ${text.slice(0, 100)}`); }
       if (data.error) throw new Error(data.error);
 
       if (data.parsed.start_date) setClaimedDate(data.parsed.start_date);
@@ -153,9 +155,9 @@ export default function AnalysisPanel() {
         },
         body: JSON.stringify({ action: 'summarize', verdict: res })
       })
-      .then(r => r.json())
-      .then(d => {
-        if (d.summary) setAiSummary(d.summary);
+      .then(async r => {
+        const t = await r.text();
+        try { const d = JSON.parse(t); if (d.summary) setAiSummary(d.summary); } catch { /* non-JSON, ignore */ }
       })
       .catch(console.error);
 
@@ -175,7 +177,9 @@ export default function AnalysisPanel() {
           body: JSON.stringify({ lat: res.coordinates.lat, lon: res.coordinates.lon, detected_date: targetDate })
         })
         .then(async r => {
-          const d = await r.json();
+          const t = await r.text();
+          let d;
+          try { d = JSON.parse(t); } catch { throw new Error(`Optical API returned non-JSON (HTTP ${r.status})`); }
           if (!r.ok) throw new Error(d.error || 'Failed to fetch optical verification');
           setOpticalData(d);
         })
