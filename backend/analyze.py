@@ -16,7 +16,7 @@ import argparse
 from datetime import datetime, timedelta
 
 from sar_fetch import fetch_backscatter, get_default_date_range
-from change_point import detect_change_point
+from change_point import assess_prior_structure, detect_change_point
 from site_check import check_site
 
 # Ground disturbance up to a month before the NTP is routine mobilisation, not a
@@ -35,9 +35,40 @@ LATE_TOLERANCE_DAYS = 90
 SENTINEL1_COVERAGE_START = datetime(2014, 10, 3)
 
 
-def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) -> dict:
+def evaluate_verdict(
+    claimed_date_str: str,
+    detected_date,
+    confidence: float,
+    prior_structure: dict | None = None,
+) -> dict:
     """Apply verdict logic and return verdict dict."""
     claimed = datetime.strptime(claimed_date_str, "%Y-%m-%d")
+
+    # A structure already standing at the NTP settles the question on its own,
+    # and it has to be checked first. Such a site produces no change point to
+    # find — it was built before the window even opens — so the detector latches
+    # onto whatever shifted later and the timeline logic reads that as a late
+    # start. The evidence here is the level, not a date.
+    if prior_structure and prior_structure.get("exists_before_ntp"):
+        pre_db = prior_structure["pre_ntp_db"]
+        rise_db = prior_structure["rise_db"]
+        return {
+            "verdict": "PRE_EXISTING",
+            "explanation": (
+                f"Before the contract Notice-to-Proceed, radar backscatter at this "
+                f"coordinate already read {pre_db} dB above the surrounding land, "
+                f"which is the signature of a hard structure rather than open "
+                f"ground. Across the contract period that reading moved by "
+                f"{rise_db:+.2f} dB, so the site ends the contract much as it "
+                f"began. This timeline discrepancy may warrant review by an "
+                f"authorized auditor.\n\n"
+                "Top 3 Possibilities:\n"
+                "• Pre-existing Structure: the works may relate to a prior structure or contract at the same site - records should be cross-checked.\n"
+                "• Relocated Works: the contracted structure may have been built somewhere other than the approved site.\n"
+                "• Coordinate Mismatch: the recorded GPS coordinates may point to an adjacent structure - physical verification is recommended."
+            ),
+            "days_difference": None,
+        }
 
     if detected_date is None:
         return {
@@ -157,8 +188,11 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
         }
 
     result = detect_change_point(df)
+    prior_structure = assess_prior_structure(df, datetime.strptime(claimed_date, "%Y-%m-%d"))
 
-    verdict_data = evaluate_verdict(claimed_date, result.detected_date, result.confidence)
+    verdict_data = evaluate_verdict(
+        claimed_date, result.detected_date, result.confidence, prior_structure
+    )
 
     # Build series in the same shape as mockData.ts
     series = []
@@ -183,6 +217,7 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
         "coordinates": {"lat": lat, "lon": lon},
         "project_name": project_name,
         "site_check": site,
+        "prior_structure": prior_structure,
     }
 
 

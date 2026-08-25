@@ -165,3 +165,64 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
         smoothed_series=smoothed_df,
         breakpoint_index=best_bp,
     )
+
+# A site reading this far above the land around it is carrying something hard —
+# concrete, rock armour, a wall. Bare ground and water sit at or below zero.
+PRIOR_STRUCTURE_MIN_DB = 2.0
+
+# How much the level must climb across the NTP to count as work done under this
+# contract. Below this the site ends the contract looking as it began.
+CONTRACT_ERA_RISE_DB = 0.5
+
+
+def assess_prior_structure(df: pd.DataFrame, claimed_date: datetime) -> dict:
+    """
+    Decide whether a structure was already standing when the contract began.
+
+    Change point detection cannot answer this. It reports when the signal moved,
+    so a structure built before the analysis window opens produces no change to
+    find and the site reads as flat — which is why such projects were coming
+    back as DELAYED_START off some unrelated later shift.
+
+    This reads the level instead. `relative_db` is the site minus the land
+    around it, so it says how much harder the surface is than its own
+    surroundings, independent of season or moisture.
+
+    A structure already present shows two things together: the site sits well
+    above its surroundings before the NTP, and it does not climb further during
+    the contract. Both are needed. A legitimate project can also start from a
+    high baseline — a riverbank already carries rock and revetment — and there
+    the level keeps rising as work proceeds.
+
+    Returns:
+        {"exists_before_ntp": bool, "pre_ntp_db": float|None,
+         "post_ntp_db": float|None, "rise_db": float|None}
+    """
+    unknown = {
+        "exists_before_ntp": False,
+        "pre_ntp_db": None,
+        "post_ntp_db": None,
+        "rise_db": None,
+    }
+    if "relative_db" not in df.columns or len(df) < 6:
+        return unknown
+
+    before = df[df["date"] < claimed_date]["relative_db"]
+    after = df[df["date"] >= claimed_date]["relative_db"]
+    # Need real coverage on both sides, or the comparison means nothing.
+    if len(before) < 3 or len(after) < 3:
+        return unknown
+
+    # Medians, so a single flooded or windy pass cannot swing the answer.
+    pre_db = float(before.median())
+    post_db = float(after.median())
+    rise_db = post_db - pre_db
+
+    return {
+        "exists_before_ntp": (
+            pre_db >= PRIOR_STRUCTURE_MIN_DB and rise_db < CONTRACT_ERA_RISE_DB
+        ),
+        "pre_ntp_db": round(pre_db, 2),
+        "post_ntp_db": round(post_db, 2),
+        "rise_db": round(rise_db, 2),
+    }

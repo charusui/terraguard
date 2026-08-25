@@ -25,6 +25,15 @@ export interface AnalysisResult {
   series: BackscatterPoint[];
   change_point: ChangePointResult;
   verdict: VerdictType;
+  // Level-based evidence: whether a structure was already standing at the NTP.
+  // Present when the analysis ran; drives the PRE_EXISTING verdict, which has no
+  // change-point date behind it.
+  prior_structure?: {
+    exists_before_ntp: boolean;
+    pre_ntp_db: number | null;
+    post_ntp_db: number | null;
+    rise_db: number | null;
+  };
   // Coordinate plausibility, attached by the backend as a caveat rather than a
   // verdict — present only when the analysis actually ran.
   site_check?: {

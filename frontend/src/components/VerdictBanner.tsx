@@ -127,6 +127,13 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
 
   const OffsetIcon = diff !== null && diff < 0 ? ArrowLeft : ArrowRight;
 
+  // A pre-existing structure is established by the signal level, not by a change
+  // point — there is no construction event to date, which is the whole finding.
+  // Showing the usual change-point tiles here would put an unrelated later date
+  // beside a verdict about what stood before the contract.
+  const prior = result.prior_structure;
+  const isLevelEvidence = Boolean(prior?.exists_before_ntp);
+
   return (
     <div style={{ paddingTop: '32px', fontFamily: FONT_HEADING }}>
       <div
@@ -172,7 +179,10 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
             </p>
           </div>
 
-          {detected_date && (
+          {/* The ring scores the change point. A level-based verdict has no
+              change point behind it, so showing that number here would rate
+              confidence in a shift the finding does not rest on. */}
+          {detected_date && !isLevelEvidence && (
             <div
               style={{
                 display: 'flex',
@@ -210,19 +220,37 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
             value={formatCoordinates(result.coordinates.lat, result.coordinates.lon)}
           />
           <DataTile icon={<Calendar size={14} weight="regular" />} label="Claimed NTP" value={formatFullDate(result.claimed_date)} />
-          <DataTile
-            icon={<Broadcast size={14} weight="regular" />}
-            label="Detected change"
-            value={detected_date ? formatFullDate(detected_date) : 'None detected'}
-            muted={!detected_date}
-          />
-          {diff !== null && (
-            <DataTile
-              icon={<OffsetIcon size={14} weight="regular" />}
-              label={diff < 0 ? 'Days before NTP' : 'Days after NTP'}
-              value={`${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'day' : 'days'}`}
-              accent={cfg.accent}
-            />
+          {isLevelEvidence ? (
+            <>
+              <DataTile
+                icon={<Broadcast size={14} weight="regular" />}
+                label="Signal before NTP"
+                value={`${prior!.pre_ntp_db} dB above surroundings`}
+                accent={cfg.accent}
+              />
+              <DataTile
+                icon={<ArrowRight size={14} weight="regular" />}
+                label="Change during contract"
+                value={`${prior!.rise_db! >= 0 ? '+' : ''}${prior!.rise_db} dB`}
+              />
+            </>
+          ) : (
+            <>
+              <DataTile
+                icon={<Broadcast size={14} weight="regular" />}
+                label="Detected change"
+                value={detected_date ? formatFullDate(detected_date) : 'None detected'}
+                muted={!detected_date}
+              />
+              {diff !== null && (
+                <DataTile
+                  icon={<OffsetIcon size={14} weight="regular" />}
+                  label={diff < 0 ? 'Days before NTP' : 'Days after NTP'}
+                  value={`${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'day' : 'days'}`}
+                  accent={cfg.accent}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
