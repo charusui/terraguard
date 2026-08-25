@@ -78,9 +78,15 @@ export default function AnalysisPanel() {
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<'known' | 'custom'>('known');
   const [selectedCase, setSelectedCase] = useState(KNOWN_CASES[0].name);
-  const [lat, setLat] = useState('14.5995');
-  const [lon, setLon] = useState('120.9842');
-  const [claimedDate, setClaimedDate] = useState('2023-06-01');
+  // Empty for the same reason as the date below: a prefilled Manila coordinate
+  // is a real place, so an unnoticed one produces a confident verdict about a
+  // site the operator never chose. The placeholders still show the format.
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  // Starts empty on purpose. A hardcoded default here is worse than a blank
+  // field: when the assistant cannot find a date, a plausible-looking one is
+  // left sitting in the box, and every verdict is measured against it.
+  const [claimedDate, setClaimedDate] = useState('');
   const [projectName, setProjectName] = useState('');
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -127,7 +133,10 @@ export default function AnalysisPanel() {
       // without one, and an unusable value here is what previously reached the
       // date input as a blank field that still POSTed a bad string.
       const foundDate = isISODate(data.parsed?.start_date) ? data.parsed.start_date : null;
-      if (foundDate) setClaimedDate(foundDate);
+      // Clear on a miss as well as setting on a hit. Leaving the previous
+      // query's date in the box is how a verdict ends up measured against a
+      // date belonging to a different project.
+      setClaimedDate(foundDate ?? '');
       if (data.parsed?.location_name) setProjectName(data.parsed.location_name);
 
       const notes: string[] = [];
