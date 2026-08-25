@@ -31,12 +31,22 @@ for _p in [
 
 from http.server import BaseHTTPRequestHandler
 
+# Import the analysis code across the frontend/backend seam. This is deferred
+# rather than fatal: if backend/ failed to make it into the bundle, we still want
+# a JSON error body so the UI can show the real reason instead of a bare 500.
+#
+# Note: no `from analyze import ...` fallback here — this module is itself named
+# `analyze`, so that import resolves to this file and dies with a confusing
+# partially-initialized-module error.
+analyze = None
+_import_error = None
 try:
     from backend.analyze import analyze
-except ImportError:
-    # Fallback: on some Vercel layouts the modules sit directly on sys.path
-    from analyze import analyze as _raw_analyze
-    analyze = _raw_analyze
+except Exception as _e:  # noqa: BLE001 — surfaced to the client below
+    _import_error = (
+        f"{type(_e).__name__}: {_e}. The backend/ package is not importable from "
+        f"the serverless function (sys.path={sys.path!r})."
+    )
 
 
 class handler(BaseHTTPRequestHandler):
@@ -50,6 +60,13 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+            return
+
+        if analyze is None:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": _import_error}).encode('utf-8'))
             return
 
         content_length = int(self.headers.get('Content-Length', 0))

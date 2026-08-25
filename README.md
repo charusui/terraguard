@@ -53,6 +53,21 @@ TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF co
    DEMO_USERNAME=your_username
    DEMO_PASSWORD=your_password
    DEMO_AUTH_SECRET=your_secret_key
+
+   # Powers the AI assistant (natural-language lookup and result summaries)
+   GEMINI_API_KEY=your_gemini_key
+
+   # TODO: not yet set. The AI assistant uses this to look up a project's
+   # contract start date. Sign up at https://serpapi.com/ (free tier: 100
+   # searches/month) and add the key here and in the Vercel project settings.
+   # Until it is set the assistant cannot prefill a date and the UI asks the
+   # operator to enter one by hand — nothing else is affected.
+   SERPAPI_API_KEY=
+
+   # Search results are labelled official / news / community by domain, and
+   # the UI says so. Set this to false to drop community-edited sources
+   # (wikis, forums, blog hosts) from results entirely.
+   ALLOW_COMMUNITY_SOURCES=true
    \`\`\`
 
 4. **Run the Next.js development server:**

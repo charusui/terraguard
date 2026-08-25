@@ -29,6 +29,27 @@ const CONFIG: Record<VerdictType, {
     accent: 'var(--warning)',
     summary: 'No sustained shift in radar surface roughness was found across the observed window.',
   },
+  LOCATION_MISMATCH: {
+    Icon: MapPin,
+    label: 'Recorded location looks wrong',
+    className: 'verdict-yellow',
+    accent: 'var(--warning)',
+    summary: 'The coordinate does not match the structure the contract describes, so no satellite reading here can be trusted.',
+  },
+  INSUFFICIENT_DATA: {
+    Icon: Question,
+    label: 'Not enough satellite data',
+    className: 'verdict-yellow',
+    accent: 'var(--mute)',
+    summary: 'No usable radar imagery covers this location and period, so no conclusion can be drawn either way.',
+  },
+  DELAYED_START: {
+    Icon: WarningDiamond,
+    label: 'Delayed start detected',
+    className: 'verdict-yellow',
+    accent: 'var(--warning)',
+    summary: 'Radar backscatter shifted well after the claimed notice-to-proceed date, indicating work began behind schedule.',
+  },
   CONSISTENT: {
     Icon: CheckCircle,
     label: 'Timeline consistent',

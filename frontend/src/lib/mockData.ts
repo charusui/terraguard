@@ -1,7 +1,13 @@
 // Mock SAR backscatter data for demo purposes
 // In the real system, this comes from Google Earth Engine Sentinel-1 GRD queries
 
-export type VerdictType = 'PRE_EXISTING' | 'NO_CHANGE_DETECTED' | 'CONSISTENT';
+export type VerdictType =
+  | 'PRE_EXISTING'
+  | 'NO_CHANGE_DETECTED'
+  | 'CONSISTENT'
+  | 'DELAYED_START'
+  | 'INSUFFICIENT_DATA'
+  | 'LOCATION_MISMATCH';
 
 export interface BackscatterPoint {
   date: string;
@@ -19,6 +25,14 @@ export interface AnalysisResult {
   series: BackscatterPoint[];
   change_point: ChangePointResult;
   verdict: VerdictType;
+  // Coordinate plausibility, attached by the backend as a caveat rather than a
+  // verdict — present only when the analysis actually ran.
+  site_check?: {
+    is_plausible: boolean;
+    expects_water: boolean;
+    water_distance_m: number | null;
+    reason: string | null;
+  };
   explanation: string;
   claimed_date: string;
   coordinates: { lat: number; lon: number };
@@ -36,33 +50,38 @@ export interface KnownCase {
 }
 
 // Known COA-flagged case studies (Real-world coordinates for testing the SAR engine)
+// Demo cases are chosen so the engine can actually read them: every coordinate
+// sits on a watercourse and every NTP falls inside the Sentinel-1 archive
+// (October 2014 onward). Coordinates and contract dates come from the DPWH
+// transparency dataset; the findings come from COA fraud-audit reporting.
+// backend/tests/verified_cases.py holds the full audited set with citations.
 export const KNOWN_CASES: KnownCase[] = [
   {
-    name: 'DPWH Pampanga 1st District Engineering Office (Ghost Earthworks)',
-    lat: 15.0646,
-    lon: 120.7198,
-    claimed_ntp_date: '2010-06-01',
-    source: 'Supreme Court G.R. No. 246777',
-    source_url: 'https://lawphil.net/judjuris/juri2021/mar2021/gr_246777_2021.html',
-    description: 'COA auditors discovered the contractor fraudulently claimed to have moved 31,491 cubic meters of embankment materials. TerraGuard should flag this by showing no change in SAR coherence.',
+    name: 'Bambang, Bocaue — Slope Protection (Pre-existing Structure)',
+    lat: 14.7636,
+    lon: 120.92071,
+    claimed_ntp_date: '2024-04-23',
+    source: 'COA fraud audit, contract 24CC0149',
+    source_url: 'https://www.philstar.com/nation/2025/09/26/2475562/irregularities-detailed-audit-reports-bulacan-flood-control-projects',
+    description: 'COA found satellite imagery from 29 February 2024 — two months before the 23 April Notice-to-Proceed — already showing a flood control structure at the approved site. A P98.99M joint venture.',
   },
   {
-    name: 'Slope Protection Works (Duplicated Project)',
-    lat: 15.2215,
-    lon: 120.5755,
-    claimed_ntp_date: '2016-06-01',
-    source: 'Philstar: Return P92.5 million',
-    source_url: 'https://www.philstar.com/nation/2019/01/17/1885650/return-p925-million-ex-pampanga-mayor-told',
-    description: 'A pure duplication scheme where the local government awarded a contract for a wall already being built by DPWH. The SAR engine should detect the structure appearing before the local contract award.',
+    name: 'Sipat Section, Plaridel — Angat River (Ghost Project)',
+    lat: 14.9036,
+    lon: 120.82639,
+    claimed_ntp_date: '2024-03-20',
+    source: 'COA fraud audit, contract 24CC0144',
+    source_url: 'https://newsinfo.inquirer.net/2111439/coa-fraud-audit-tags-4-more-flood-infra-projects-in-bulacan',
+    description: 'Reported complete on 11 June 2024, but historical satellite imagery showed no flood control structure at the site as of 7 April 2025. Undertaken by Wawao Builders.',
   },
   {
-    name: 'Betis River Flood Protection Structure',
-    lat: 14.9818,
-    lon: 120.6433,
+    name: 'Betis River Slope Protection, Guagua (Legitimate)',
+    lat: 14.9748306,
+    lon: 120.6427306,
     claimed_ntp_date: '2022-06-01',
-    source: 'Wikimedia Commons / DPWH Records',
+    source: 'DPWH contract 22CH0082 / Wikimedia Commons',
     source_url: 'https://commons.wikimedia.org/wiki/File:Flood_protection_in_Betis_River_(Pampanga;_2023-08-22)_E911a_08.jpg',
-    description: 'A fully legitimate project. The SAR engine should output a "Verified Active Progression" showing the structure appearing within the contract timeline.',
+    description: 'A legitimate project with construction photo-documented on site, running 1 June to 27 November 2022. The engine detects ground disturbance 22 days before the Notice-to-Proceed — routine mobilisation — and reports the timeline as consistent.',
   },
 ];
 
@@ -147,6 +166,10 @@ function getExplanation(verdict: VerdictType, changePoint: ChangePointResult): s
     const days = Math.abs(changePoint.days_difference ?? 0);
     return `Satellite backscatter data shows significant ground disturbance approximately ${days} days BEFORE the contract Notice-to-Proceed date. This indicates the structure may have already existed prior to the contract award — a potential indicator of pre-existing infrastructure fraud.`;
   }
+  if (verdict === 'DELAYED_START') {
+    const days = Math.abs(changePoint.days_difference ?? 0);
+    return `Satellite backscatter data shows ground disturbance approximately ${days} days AFTER the contract Notice-to-Proceed date. Work appears to have started well behind the contract timeline, which may warrant review of the project's schedule and billing records.`;
+  }
   if (verdict === 'NO_CHANGE_DETECTED') {
     return `No statistically significant change in backscatter was detected at this coordinate during the entire analysis window. Despite billing claims, the satellite record shows no evidence of construction activity. This may indicate ghost billing or a project that has not yet broken ground.`;
   }
@@ -179,8 +202,13 @@ export async function analyzeCoordinate(
         const err = JSON.parse(text);
         errorMsg = err.error ?? errorMsg;
       } catch {
-        // Response was HTML or other non-JSON — use status text
-        errorMsg = `API returned ${res.status}: ${res.statusText}`;
+        // Response was HTML or a raw traceback — Vercel serves its own error page
+        // when a function crashes at import time, so include a slice of the body.
+        // Without it this reads as a bare "API returned 500:" and says nothing.
+        const detail = text.trim().replace(/\s+/g, ' ').slice(0, 200);
+        errorMsg = detail
+          ? `API returned ${res.status}: ${detail}`
+          : `API returned ${res.status}: ${res.statusText || 'no response body'}`;
       }
       throw new Error(errorMsg);
     }

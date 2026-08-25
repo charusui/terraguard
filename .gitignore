@@ -10,3 +10,7 @@ test_*.py
 
 .claude/
 .impeccable/
+
+# Python bytecode
+__pycache__/
+*.pyc

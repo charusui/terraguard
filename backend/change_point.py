@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+# SNR at which a detection is considered an even bet. A shift twice the
+# residual noise is suggestive; three times is convincing.
+CONFIDENCE_MIDPOINT_SNR = 2.5
+
 
 @dataclass
 class ChangePointResult:
@@ -39,18 +43,38 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
             breakpoint_index=None,
         )
 
+    # Prefer the detrended series: site minus surrounding reference, which
+    # cancels whatever moved across the whole area (moisture, seasonal drying)
+    # and leaves what is local to the site. Falls back to the raw reading for
+    # callers and fixtures that predate the reference column.
+    source_column = "relative_db" if "relative_db" in df.columns else "backscatter_db"
+
     # --- Preprocessing ---
     # 1. Rolling median (window=7) to heavily suppress temporary SAR speckle and transient events (trucks/floods)
-    values = df["backscatter_db"].values.copy()
+    values = df[source_column].values.copy()
     smoothed = pd.Series(values).rolling(window=7, center=True, min_periods=1).median().values.copy()
 
     # 2. Z-score outlier removal (>3σ replaced with rolling median)
     z_scores = np.abs((smoothed - smoothed.mean()) / (smoothed.std() + 1e-9))
     smoothed[z_scores > 3] = np.nan
-    smoothed = pd.Series(smoothed).interpolate().values
+    # limit_direction fills leading/trailing gaps too. Plain interpolate()
+    # leaves a NaN at index 0 if the first sample was an outlier, and that
+    # NaN then propagates all the way into the reported confidence.
+    smoothed = pd.Series(smoothed).interpolate(limit_direction="both").values
 
     smoothed_df = df.copy()
-    smoothed_df["smoothed_db"] = smoothed
+    # The chart stays in raw dB, which is the readable unit and keeps the plotted
+    # line comparable across sites. Detection runs on the detrended series above.
+    # A marked change point may therefore not sit on an obvious step in the raw
+    # line — that gap is the regional signal detrending removed.
+    if source_column != "backscatter_db":
+        display = pd.Series(df["backscatter_db"].values).rolling(
+            window=7, center=True, min_periods=1
+        ).median().values
+        smoothed_df["smoothed_db"] = display
+        smoothed_df["smoothed_relative_db"] = smoothed
+    else:
+        smoothed_df["smoothed_db"] = smoothed
 
     # --- Change point detection with ruptures.Pelt ---
     signal = smoothed.reshape(-1, 1)
@@ -97,13 +121,31 @@ def detect_change_point(df: pd.DataFrame) -> ChangePointResult:
     # --- Significance thresholds ---
     # 0.35 dB threshold to detect real structural changes (which typically range from 0.7 - 1.5 dB)
     MIN_SHIFT_DB = 0.35
-    MIN_CONFIDENCE = 0.3
+    # Now reachable: a detection below this is reported as no change rather than
+    # being surfaced with a reassuring-looking number attached. Sits just under
+    # the logistic midpoint, which is a judgement call rather than a bright line;
+    # measured as neither adding nor removing matches on the audited set.
+    MIN_CONFIDENCE = 0.45
 
-    overall_variance = smoothed.std()
-    snr = best_shift / (overall_variance + 1e-9)
+    # Noise is the variation left *within* each segment once the step is taken
+    # out. Dividing by the whole-series std, as this used to, is self-defeating:
+    # a large step inflates that std and so suppresses its own score.
+    before_segment = smoothed[:best_bp]
+    after_segment = smoothed[best_bp:]
+    residuals = np.concatenate([
+        before_segment - before_segment.mean(),
+        after_segment - after_segment.mean(),
+    ])
+    snr = best_shift / (residuals.std() + 1e-9)
     
-    # Map the Signal-to-Noise Ratio (SNR) to a more realistic probability curve.
-    confidence = float(np.clip(0.65 + (snr * 0.15), 0.0, 0.99))
+    # Logistic on the signal-to-noise ratio, centred at CONFIDENCE_MIDPOINT_SNR.
+    # The previous mapping was `0.65 + snr * 0.15`, which put a 65% floor under
+    # every detection — weak evidence was indistinguishable from strong, and the
+    # MIN_CONFIDENCE check below could never fire. This starts near zero, so a
+    # shift that barely clears the noise now reports as barely credible.
+    confidence = float(
+        np.clip(1.0 / (1.0 + np.exp(-(snr - CONFIDENCE_MIDPOINT_SNR))), 0.0, 0.99)
+    )
 
     if best_shift < MIN_SHIFT_DB or confidence < MIN_CONFIDENCE:
         return ChangePointResult(

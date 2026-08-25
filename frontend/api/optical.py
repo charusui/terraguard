@@ -22,12 +22,19 @@ for _p in [
 
 from http.server import BaseHTTPRequestHandler
 
+# Deferred import across the frontend/backend seam — see the note in analyze.py.
+# A missing backend/ comes back as a JSON error rather than a module-level crash.
+get_nearest_clear_image = None
+process_optical_image = None
+_import_error = None
 try:
     from backend.optical_fetch import get_nearest_clear_image
     from backend.vision_annotate import process_optical_image
-except ImportError:
-    from optical_fetch import get_nearest_clear_image
-    from vision_annotate import process_optical_image
+except Exception as _e:  # noqa: BLE001 — surfaced to the client below
+    _import_error = (
+        f"{type(_e).__name__}: {_e}. The backend/ package is not importable from "
+        f"the serverless function (sys.path={sys.path!r})."
+    )
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -40,6 +47,13 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+            return
+
+        if get_nearest_clear_image is None or process_optical_image is None:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": _import_error}).encode('utf-8'))
             return
 
         content_length = int(self.headers.get('Content-Length', 0))

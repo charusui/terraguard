@@ -17,8 +17,22 @@ from datetime import datetime, timedelta
 
 from sar_fetch import fetch_backscatter, get_default_date_range
 from change_point import detect_change_point
+from site_check import check_site
 
-TOLERANCE_DAYS = 12  # Sentinel-1 revisit interval
+# Ground disturbance up to a month before the NTP is routine mobilisation, not a
+# pre-existing structure. This was 12 days, the Sentinel-1 revisit interval — a
+# property of the satellite that says nothing about how contracts actually start.
+TOLERANCE_DAYS = 30
+# Ground disturbance this far after the NTP is a delayed start, not an on-time
+# one. Calibrated against the Betis River flood protection works — a project
+# auditors verified as legitimate — whose first detectable earthworks appear 50
+# days after NTP. A quarter allows for mobilisation and the 12-day revisit
+# granularity without waving through a genuinely stalled project.
+LATE_TOLERANCE_DAYS = 90
+
+# Sentinel-1A reached its operational orbit in October 2014. Nothing before this
+# can be analysed at all, and saying so is not the same as finding no activity.
+SENTINEL1_COVERAGE_START = datetime(2014, 10, 3)
 
 
 def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) -> dict:
@@ -44,6 +58,24 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
     days_diff = int((detected_date - claimed).days)
     tolerance = timedelta(days=TOLERANCE_DAYS)
 
+    late_tolerance = timedelta(days=LATE_TOLERANCE_DAYS)
+
+    if detected_date > claimed + late_tolerance:
+        return {
+            "verdict": "DELAYED_START",
+            "explanation": (
+                f"Radar backscatter data indicates ground disturbance approximately "
+                f"{days_diff} days after the contract Notice-to-Proceed date. Work "
+                f"appears to have started well behind the contract timeline, which "
+                f"may warrant review by an authorized auditor.\n\n"
+                "Top 3 Possibilities:\n"
+                "• Delayed Mobilization: The contractor may have broken ground months after the NTP was issued — schedule records should be cross-checked.\n"
+                "• Billing Ahead of Work: Progress may have been billed for a period before any surface activity is visible in the satellite record.\n"
+                "• Unrelated Disturbance: The detected change may reflect an unrelated event at the site rather than the contracted work — physical verification is recommended."
+            ),
+            "days_difference": days_diff,
+        }
+
     if detected_date < claimed - tolerance:
         days_before = abs(days_diff)
         return {
@@ -64,7 +96,7 @@ def evaluate_verdict(claimed_date_str: str, detected_date, confidence: float) ->
             "verdict": "CONSISTENT",
             "explanation": (
                 "The detected construction start date is consistent with the contract timeline. "
-                "Backscatter change was observed within the expected window following the "
+                f"Backscatter change was observed within {LATE_TOLERANCE_DAYS} days of the "
                 "Notice-to-Proceed date.\n\n"
                 "Top 3 Possibilities:\n"
                 "• Legitimate Execution: The project broke ground on schedule after the Notice-to-Proceed.\n"
@@ -80,13 +112,31 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
     Full analysis pipeline: GEE fetch → change point → verdict.
     Returns a dict matching the AnalysisResult shape in mockData.ts
     """
+    # Coordinate plausibility runs as a caveat, not a gate. A point far from
+    # any water is very likely wrong, but blocking on it left the operator with
+    # no reading at all — so the analysis proceeds and the doubt travels with
+    # the result for them to weigh.
+    site = check_site(lat, lon, project_name)
+
     start_date, end_date = get_default_date_range(claimed_date)
 
     try:
         df = fetch_backscatter(lat, lon, start_date, end_date)
     except ValueError as e:
-        # E.g., if there is no Sentinel-1 data for the historical period
-        verdict_data = evaluate_verdict(claimed_date, None, 0.0)
+        # No usable imagery. This must NOT fall through to NO_CHANGE_DETECTED:
+        # that verdict means "we looked and construction was absent", which
+        # reads as a possible ghost project. Absent data is not absent activity,
+        # and conflating them puts an unfounded finding against a contractor.
+        claimed = datetime.strptime(claimed_date, "%Y-%m-%d")
+        if claimed < SENTINEL1_COVERAGE_START:
+            detail = (
+                f"The contract Notice-to-Proceed date ({claimed_date}) predates the "
+                f"Sentinel-1 radar archive, which begins "
+                f"{SENTINEL1_COVERAGE_START.strftime('%B %Y')}. There is no satellite "
+                "record for this period, so this project cannot be assessed by this method."
+            )
+        else:
+            detail = str(e)
         return {
             "series": [],
             "change_point": {
@@ -94,11 +144,16 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
                 "confidence": 0.0,
                 "days_difference": None,
             },
-            "verdict": verdict_data["verdict"],
-            "explanation": verdict_data["explanation"],
+            "verdict": "INSUFFICIENT_DATA",
+            "explanation": (
+                f"{detail}\n\n"
+                "No conclusion should be drawn about this project from this result — "
+                "it reports a gap in the satellite record, not a finding about the work."
+            ),
             "claimed_date": claimed_date,
             "coordinates": {"lat": lat, "lon": lon},
             "project_name": project_name,
+            "site_check": site,
         }
 
     result = detect_change_point(df)
@@ -127,6 +182,7 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
         "claimed_date": claimed_date,
         "coordinates": {"lat": lat, "lon": lon},
         "project_name": project_name,
+        "site_check": site,
     }
 
 

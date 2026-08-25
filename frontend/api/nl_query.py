@@ -1,9 +1,37 @@
 import json
 import os
+import sys
 import requests
+
+# ---------------------------------------------------------------------------
+# Path setup — must resolve on BOTH local dev AND Vercel's Lambda runtime.
+# See the detailed comment in analyze.py for the full explanation.
+# ---------------------------------------------------------------------------
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+_project_dir = os.path.dirname(_api_dir)
+_repo_root = os.path.dirname(_project_dir)
+
+for _p in [
+    _repo_root,
+    os.path.join(_repo_root, 'backend'),
+    _project_dir,
+    os.path.join(_project_dir, 'backend'),
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from http.server import BaseHTTPRequestHandler
 
 import google.generativeai as genai
+
+# Deferred import across the frontend/backend seam — see the note in analyze.py.
+extract_query_fields = None
+resolve_ntp_date = None
+_import_error = None
+try:
+    from backend.ntp_lookup import extract_query_fields, resolve_ntp_date
+except Exception as _e:  # noqa: BLE001 — surfaced to the client below
+    _import_error = f"{type(_e).__name__}: {_e}"
 
 # Setup Gemini API
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -47,44 +75,52 @@ class handler(BaseHTTPRequestHandler):
         if not text:
             self.send_json({"error": "No text provided"}, 400)
             return
-            
+
         if not api_key:
             self.send_json({"error": "GEMINI_API_KEY not configured"}, 500)
             return
 
-        # 1. Parse text with Gemini
-        model = genai.GenerativeModel(
-            "gemini-3.5-flash-lite",
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "location_name": {"type": "STRING"},
-                        "start_date": {"type": "STRING"},
-                        "end_date": {"type": "STRING"}
-                    }
-                }
-            },
-            system_instruction="Extract the location name and any date ranges from the user's query. Format dates as YYYY-MM-DD. If a field is not present or you are unsure, return null for that field. Do not guess."
-        )
+        if extract_query_fields is None:
+            self.send_json({"error": f"Query parser unavailable: {_import_error}"}, 500)
+            return
 
+        # 1. Read whatever the operator stated outright.
         try:
-            response = model.generate_content(text)
-            parsed = json.loads(response.text)
+            fields = extract_query_fields(text)
         except Exception as e:
             self.send_json({"error": f"Failed to parse query: {str(e)}"}, 500)
             return
 
-        location_name = parsed.get("location_name")
-        start_date = parsed.get("start_date")
-        end_date = parsed.get("end_date")
+        location_name = fields["location_name"]
+        start_date = fields["start_date"]
+        end_date = fields["end_date"]
 
+        # 2. Only search when the operator did not give a date. An explicit date
+        #    is authoritative — never override what the user typed.
+        ntp_lookup = {
+            "searched": False,
+            "date": None,
+            "date_label": None,
+            "source_url": None,
+            "source_authority": None,
+            "rationale": None,
+            "results_count": 0,
+        }
+        if not start_date:
+            search_query = fields["search_query"] or location_name or text
+            try:
+                ntp_lookup = resolve_ntp_date(search_query, text, location_name)
+                if ntp_lookup["date"]:
+                    start_date = ntp_lookup["date"]
+            except Exception as e:
+                # A failed lookup degrades to manual entry; it is not a request failure.
+                print("NTP lookup error:", e)
+
+        # 3. Geocode the location.
         lat = None
         lon = None
         display_name = None
 
-        # 2. Geocode if location is found
         if location_name:
             try:
                 headers = {'User-Agent': 'TerraGuard-Hackathon-Bot/1.0'}
@@ -111,7 +147,8 @@ class handler(BaseHTTPRequestHandler):
                 "lat": lat,
                 "lon": lon,
                 "display_name": display_name
-            }
+            },
+            "ntp_lookup": ntp_lookup
         })
 
     def handle_summarize(self, verdict_dict):
