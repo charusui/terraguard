@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 
 from sar_fetch import fetch_backscatter, get_default_date_range
 from change_point import assess_prior_structure, detect_change_point
+from footprint import compute_footprint
 from site_check import check_site
 
 # Ground disturbance up to a month before the NTP is routine mobilisation, not a
@@ -35,11 +36,13 @@ LATE_TOLERANCE_DAYS = 90
 SENTINEL1_COVERAGE_START = datetime(2014, 10, 3)
 
 
+
 def evaluate_verdict(
     claimed_date_str: str,
     detected_date,
     confidence: float,
     prior_structure: dict | None = None,
+    footprint: dict | None = None,
 ) -> dict:
     """Apply verdict logic and return verdict dict."""
     claimed = datetime.strptime(claimed_date_str, "%Y-%m-%d")
@@ -71,6 +74,13 @@ def evaluate_verdict(
         }
 
     if detected_date is None:
+        # The footprint is deliberately not consulted here. Measured against the
+        # audited set, neither the centroid offset nor the distance to the
+        # nearest changed ground separated confirmed ghost projects from
+        # confirmed real ones — real riverworks scored *further* from their
+        # recorded point than ghosts did, on both metrics, with and without the
+        # water mask. Until it discriminates, it travels as context in the
+        # payload and decides nothing.
         return {
             "verdict": "NO_CHANGE_DETECTED",
             "explanation": (
@@ -138,7 +148,41 @@ def evaluate_verdict(
         }
 
 
-def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Custom Lookup") -> dict:
+def _location_mismatch(site: dict, timeline_verdict: str) -> dict:
+    """
+    Build the LOCATION_MISMATCH verdict for a coordinate that cannot be read.
+
+    The reading itself still travels with the result — series, chart, and the
+    timeline verdict the radar would have given — because an operator looking at
+    a suspect coordinate still wants to see what is actually there. What changes
+    is the headline: a confident finding about a rice field a kilometre from the
+    river is an accusation the evidence does not support.
+    """
+    return {
+        "verdict": "LOCATION_MISMATCH",
+        "explanation": (
+            f"{site['reason']}\n\n"
+            f"The radar reading at this point would otherwise have been reported as "
+            f"{timeline_verdict.replace('_', ' ').lower()}, but it describes whatever "
+            f"surrounds the recorded coordinate rather than the contracted structure. "
+            f"No conclusion should be drawn about the works until the location is "
+            f"confirmed.\n\n"
+            "Top 3 Possibilities:\n"
+            "• Recording Error: the coordinate may have been entered or transcribed incorrectly.\n"
+            "• Relocated Works: the structure may stand somewhere other than the approved site.\n"
+            "• Unmapped Watercourse: a small creek or canal may be absent from the water dataset — physical verification is recommended."
+        ),
+        "days_difference": None,
+    }
+
+
+def analyze(
+    lat: float,
+    lon: float,
+    claimed_date: str,
+    project_name: str = "Custom Lookup",
+    include_footprint: bool = True,
+) -> dict:
     """
     Full analysis pipeline: GEE fetch → change point → verdict.
     Returns a dict matching the AnalysisResult shape in mockData.ts
@@ -190,9 +234,24 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
     result = detect_change_point(df)
     prior_structure = assess_prior_structure(df, datetime.strptime(claimed_date, "%Y-%m-%d"))
 
-    verdict_data = evaluate_verdict(
-        claimed_date, result.detected_date, result.confidence, prior_structure
+    # Where the change is, not just when. Costs an extra Earth Engine round trip,
+    # so batch callers that only need the timeline can switch it off.
+    footprint = (
+        compute_footprint(lat, lon, claimed_date)
+        if include_footprint
+        else {"available": False, "reason": "Footprint measurement was skipped."}
     )
+
+    verdict_data = evaluate_verdict(
+        claimed_date, result.detected_date, result.confidence, prior_structure, footprint
+    )
+
+    # An implausible coordinate outranks whatever the radar found there. The
+    # timeline verdict is kept rather than discarded — the operator can still see
+    # what the reading said, it just stops being the headline.
+    timeline_verdict = verdict_data["verdict"]
+    if not site["is_plausible"] and site.get("reason"):
+        verdict_data = _location_mismatch(site, timeline_verdict)
 
     # Build series in the same shape as mockData.ts
     series = []
@@ -218,6 +277,10 @@ def analyze(lat: float, lon: float, claimed_date: str, project_name: str = "Cust
         "project_name": project_name,
         "site_check": site,
         "prior_structure": prior_structure,
+        "footprint": footprint,
+        # What the timeline logic concluded before any override. Equal to
+        # `verdict` unless the coordinate was rejected.
+        "timeline_verdict": timeline_verdict,
     }
 
 

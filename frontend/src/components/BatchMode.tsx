@@ -5,6 +5,10 @@ import { motion, useReducedMotion } from 'motion/react';
 import { UploadSimple, DownloadSimple, FileCsv, Warning } from '@phosphor-icons/react';
 import { type AnalysisResult, type VerdictType, analyzeCoordinate } from '@/lib/mockData';
 import { toUserMessage, logTechnicalDetail } from '@/shared/utils/errorMessage';
+import { csvCell } from '@/shared/utils/csv';
+import { useTriage } from '@/features/triage/hooks/useTriage';
+import RankedWorklist from '@/features/triage/components/RankedWorklist';
+import { type ContractRow } from '@/features/triage/types/triage';
 import LoadingState from './LoadingState';
 import { AnalyzeButton } from '@/shared/components/AnalyzeButton';
 
@@ -48,18 +52,37 @@ function splitCsvLine(line: string): string[] {
   return out;
 }
 
-function parseCSV(text: string): BatchRow[] {
+// Returns the four fields the analysis needs alongside the untouched row. The
+// extra columns — cost, length_m, contractor, district — are what the contract
+// red flags read, and dropping them here would quietly disable half of triage.
+function parseCSV(text: string): { rows: BatchRow[]; raw: ContractRow[] } {
   // \r\n from Windows-exported files leaves a stray \r on the last field,
   // which silently corrupts claimed_ntp_date.
   const lines = text.replace(/\r\n?/g, '\n').trim().split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { rows: [], raw: [] };
   const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase());
-  return lines.slice(1).map(line => {
+
+  const rows: BatchRow[] = [];
+  const raw: ContractRow[] = [];
+
+  lines.slice(1).forEach(line => {
     const vals = splitCsvLine(line);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => { row[h] = vals[i] ?? ''; });
-    return { name: row.name, lat: parseFloat(row.lat), lon: parseFloat(row.lon), claimed_ntp_date: row.claimed_ntp_date };
-  }).filter(r => r.name && !isNaN(r.lat) && !isNaN(r.lon));
+
+    const parsed = {
+      name: row.name,
+      lat: parseFloat(row.lat),
+      lon: parseFloat(row.lon),
+      claimed_ntp_date: row.claimed_ntp_date,
+    };
+    if (parsed.name && !isNaN(parsed.lat) && !isNaN(parsed.lon)) {
+      rows.push(parsed);
+      raw.push(row);
+    }
+  });
+
+  return { rows, raw };
 }
 
 const VERDICT_CFG: Record<VerdictType, { label: string; accent: string }> = {
@@ -78,11 +101,6 @@ function formatCoordinates(lat: number, lon: number): string {
 function offsetLabel(days: number): string {
   const n = Math.abs(days);
   return `${n} ${n === 1 ? 'day' : 'days'} ${days < 0 ? 'before' : 'after'}`;
-}
-
-function csvCell(value: string | number): string {
-  const s = String(value ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 // Deliberately not using the .verdict-flag/.verdict-* classes — those carry a hard
@@ -118,17 +136,29 @@ export default function BatchMode() {
   const reduce = useReducedMotion();
   const [csv, setCsv] = useState('');
   const [rows, setRows] = useState<BatchRow[]>([]);
+  // The untouched CSV rows, kept alongside the parsed ones so the contract
+  // columns survive as far as the ranking call.
+  const [rawRows, setRawRows] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<BatchResult[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { triage, isLoading: isRanking, error: triageError, runTriage, reset: resetTriage } = useTriage();
 
-  const loadSample = () => { setCsv(SAMPLE); setRows(parseCSV(SAMPLE)); setResults([]); };
-  const onPaste = (t: string) => { setCsv(t); try { setRows(parseCSV(t)); setResults([]); } catch { /* ignore */ } };
+  const load = (text: string) => {
+    const { rows: parsed, raw } = parseCSV(text);
+    setRows(parsed);
+    setRawRows(raw);
+    setResults([]);
+    resetTriage();
+  };
+
+  const loadSample = () => { setCsv(SAMPLE); load(SAMPLE); };
+  const onPaste = (t: string) => { setCsv(t); try { load(t); } catch { /* ignore */ } };
   const loadFile = (f: File) => {
     const reader = new FileReader();
-    reader.onload = ev => { const t = ev.target?.result as string; setCsv(t); setRows(parseCSV(t)); setResults([]); };
+    reader.onload = ev => { const t = ev.target?.result as string; setCsv(t); load(t); };
     reader.readAsText(f);
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +197,20 @@ export default function BatchMode() {
       setResults([...out]);
     }
     setProgress(100); setLoading(false);
+
+    // Rank what actually analysed. Rows that errored carry a placeholder verdict
+    // and would otherwise be scored as findings, so they are held back — and the
+    // contract rows are filtered with them to keep the two arrays aligned.
+    const scorable = out
+      .map((result, i) => ({ result, row: rawRows[i] }))
+      .filter(entry => !entry.result.error);
+
+    if (scorable.length > 0) {
+      await runTriage(
+        scorable.map(entry => entry.row),
+        scorable.map(entry => entry.result),
+      );
+    }
   };
 
   const exportToCsv = () => {
@@ -362,6 +406,28 @@ export default function BatchMode() {
             {counts.delayed > 0 && ` · ${counts.delayed} delayed start`}
             {counts.errors > 0 && ` · ${counts.errors} failed to analyze`}
           </p>
+        </div>
+      )}
+
+      {/* Ranked worklist — the answer to "which of these do we drive to first" */}
+      {isRanking && (
+        <LoadingState label="Ranking projects" />
+      )}
+
+      {triage && !isRanking && <RankedWorklist triage={triage} results={ok} />}
+
+      {triageError && !isRanking && results.length > 0 && (
+        <div
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '16px 18px',
+            background: 'var(--canvas-soft)', borderRadius: '16px',
+            fontFamily: FONT_BODY, fontSize: '12.5px', color: 'var(--mute)',
+          }}
+        >
+          <Warning size={15} weight="bold" style={{ flexShrink: 0, marginTop: '1px' }} />
+          <span>
+            Ranking is unavailable, so the results below are unsorted. {triageError}
+          </span>
         </div>
       )}
 

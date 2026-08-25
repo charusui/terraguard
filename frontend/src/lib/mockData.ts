@@ -34,14 +34,31 @@ export interface AnalysisResult {
     post_ntp_db: number | null;
     rise_db: number | null;
   };
-  // Coordinate plausibility, attached by the backend as a caveat rather than a
-  // verdict — present only when the analysis actually ran.
+  // Coordinate plausibility. Drives the LOCATION_MISMATCH verdict when the
+  // recorded point cannot host the structure the contract describes.
   site_check?: {
     is_plausible: boolean;
     expects_water: boolean;
     water_distance_m: number | null;
     reason: string | null;
   };
+  // Where the ground changed around the coordinate, and how much of it.
+  // Reported as context only — measured against the audited set, none of these
+  // numbers separated confirmed ghost projects from confirmed real ones, so
+  // nothing in the verdict or the triage score reads them.
+  footprint?: {
+    available: boolean;
+    area_m2: number | null;
+    centroid_offset_m: number | null;
+    nearest_change_m: number | null;
+    centroid: { lat: number; lon: number } | null;
+    direction: string | null;
+    search_radius_m: number;
+    reason: string | null;
+  };
+  // What the timeline logic concluded before any override. Differs from
+  // `verdict` only when the coordinate itself was rejected.
+  timeline_verdict?: VerdictType;
   explanation: string;
   claimed_date: string;
   coordinates: { lat: number; lon: number };
