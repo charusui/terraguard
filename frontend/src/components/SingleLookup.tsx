@@ -10,6 +10,8 @@ import LoadingState from './LoadingState';
 import ThinkingState from './ThinkingState';
 import PromptBar from './PromptBar';
 import OpticalVerification, { type OpticalData } from '@/features/analysis/components/OpticalVerification';
+import ResultExplanation from '@/features/analysis/components/ResultExplanation';
+import ResultAssistant from '@/features/analysis/components/ResultAssistant';
 import { Select } from '@/shared/components/Select';
 import { AnalyzeButton } from '@/shared/components/AnalyzeButton';
 import { toUserMessage, logTechnicalDetail } from '@/shared/utils/errorMessage';
@@ -96,7 +98,6 @@ export default function AnalysisPanel() {
   const [nlQuery, setNlQuery] = useState('');
   const [aiParsing, setAiParsing] = useState(false);
   const [nlMessage, setNlMessage] = useState<string | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [nlSource, setNlSource] = useState<string | null>(null);
   // Bumped at the start of each parse — remounts ThinkingState so its step
   // counter and timer reset for the new run without any reset-on-prop-
@@ -187,7 +188,7 @@ export default function AnalysisPanel() {
   };
 
   const handleAnalyze = async () => {
-    setLoading(true); setResult(null); setError(null); setProgressStep(0); setAiSummary(null);
+    setLoading(true); setResult(null); setError(null); setProgressStep(0);
     try {
       let finalLat: number, finalLon: number, finalDate: string, finalName: string;
       if (mode === 'known') {
@@ -218,24 +219,12 @@ export default function AnalysisPanel() {
         await new Promise(r => setTimeout(r, 400));
         setProgressStep(i);
       }
-      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName);
+      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName,
+        mode === 'known' ? KNOWN_CASES.find(c => c.name === selectedCase)?.scenario : undefined
+      );
       setResult(res);
 
-      // Request AI summary in the background
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
-      fetch('/api/nl_query', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'summarize', verdict: res })
-      })
-      .then(async r => {
-        const t = await r.text();
-        try { const d = JSON.parse(t); if (d.summary) setAiSummary(d.summary); } catch { /* non-JSON, ignore */ }
-      })
-      .catch(console.error);
 
       // Request Optical Verification in the background
       const targetDate = res.change_point.detected_date || res.claimed_date;
@@ -532,19 +521,12 @@ export default function AnalysisPanel() {
 
           <div className="hairline" style={{ margin: '40px 0' }} />
 
-          {/* Explanation (Top 3 possibilities) */}
-          <div style={{ marginBottom: '40px' }}>
-            <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap', fontFamily: "'Roboto', sans-serif" }}>
-              {result.explanation}
-            </p>
-          </div>
+          {/* The written finding, with the possibilities folded behind a toggle. */}
+          <ResultExplanation explanation={result.explanation} />
 
-          {aiSummary && (
-            <div style={{ marginTop: '40px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
-              <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
-              <p className="t-body" style={{ color: 'var(--body)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary}</p>
-            </div>
-          )}
+          {/* Follow-up questions about that finding. Deliberately does not
+              restate it — ResultExplanation above already has. */}
+          <ResultAssistant result={result} />
 
 
           {/* OPTICAL VERIFICATION LAYER */}
