@@ -22,10 +22,25 @@ from collections import defaultdict
 
 EARTH_RADIUS_METERS = 6371000.0
 
-# Two coordinates closer than this are treated as the same site. Sized above
-# ordinary GPS scatter and below the length of a typical flood-control section,
-# so genuinely adjacent phases of one long project are not merged.
-DUPLICATE_RADIUS_METERS = 100
+# Two coordinates closer than this are treated as the same site.
+#
+# Measured on 1,045 Bulacan flood-control contracts from the DPWH transparency
+# dataset: at 100 m this flagged 46% of the list, at 50 m 26%, at 10 m 8%.
+# Flood-control works run in sections along the same river, so neighbouring
+# contracts sit close together by design and a generous radius just flags the
+# river. The coordinates are published to 6-7 decimals, so 10 m is real
+# precision rather than rounding noise.
+DUPLICATE_RADIUS_METERS = 10
+
+# Words that mark a contract as work on something already standing. Two new
+# builds at one point is the pattern worth an auditor's time; a repair following
+# a construction at the same site is ordinary maintenance.
+_REWORK_WORDS = ("REPAIR", "REHAB", "RESTORATION", "MAINTENANCE", "IMPROVEMENT")
+
+# Two contracts for the same spot priced this close together is worth saying out
+# loud in the reason text — the real pair found in Bulacan differed by PHP 1,699
+# out of PHP 77 million.
+COST_SIMILARITY_RATIO = 0.05
 
 # Robust z-score past which a cost per metre is called out. 3.5 on a median /
 # MAD scale is the usual threshold for "not part of this distribution"; the
@@ -120,6 +135,12 @@ def find_duplicate_coordinates(rows, radius_m=DUPLICATE_RADIUS_METERS):
     return matches
 
 
+def _is_new_build(description: str) -> bool:
+    """True when the text describes new construction, not work on an existing structure."""
+    text = (description or "").upper()
+    return "CONSTRUCTION" in text and not any(word in text for word in _REWORK_WORDS)
+
+
 def _cost_per_meter_flags(rows):
     """Robust outlier test on cost per metre, where both fields are present."""
     values = {}
@@ -157,8 +178,8 @@ def _cost_per_meter_flags(rows):
                 "id": "cost_outlier",
                 "magnitude": round(magnitude, 1),
                 "reason": (
-                    f"Cost per metre is ₱{value:,.0f} against a list median of "
-                    f"₱{median:,.0f} — {value / median:.1f}x the typical rate."
+                    f"Cost per metre is PHP {value:,.0f} against a list median of "
+                    f"PHP {median:,.0f} - {value / median:.1f}x the typical rate."
                 ),
             }
     return flags
@@ -213,6 +234,7 @@ def compute_flags(rows: list[dict]) -> list[list[dict]]:
 
     duplicates = find_duplicate_coordinates(rows)
     for i, others in duplicates.items():
+        row = rows[i]
         names = [rows[j].get("name") or f"row {j + 1}" for j in others[:3]]
         listed = ", ".join(names)
         if len(others) > 3:
@@ -225,6 +247,42 @@ def compute_flags(rows: list[dict]) -> list[list[dict]]:
                 f"{listed}."
             ),
         })
+
+        # The sharper case: the same point built new twice, under different
+        # contractors. Co-location alone is common along a river, and a repair
+        # after a construction is ordinary work — but two separate contracts
+        # both claiming to build the same structure from nothing is the pattern
+        # a senate review found 798 times in a single year's budget.
+        if not _is_new_build(row.get("description") or row.get("name") or ""):
+            continue
+        for j in others:
+            other = rows[j]
+            if not _is_new_build(other.get("description") or other.get("name") or ""):
+                continue
+            if (row.get("contractor") or "") == (other.get("contractor") or ""):
+                continue
+
+            detail = ""
+            cost_a, cost_b = _to_float(row.get("cost")), _to_float(other.get("cost"))
+            if cost_a and cost_b and abs(cost_a - cost_b) / max(cost_a, cost_b) <= COST_SIMILARITY_RATIO:
+                detail = (
+                    f" The two contracts are priced within PHP "
+                    f"{abs(cost_a - cost_b):,.0f} of each other."
+                )
+
+            flags[i].append({
+                "id": "repeat_construction",
+                "magnitude": 1,
+                "reason": (
+                    f"Two separate contracts build new at this same point: "
+                    f"{row.get('contract_id') or 'this contract'} "
+                    f"({(row.get('claimed_ntp_date') or '')[:4]}) and "
+                    f"{other.get('contract_id') or 'another'} "
+                    f"({(other.get('claimed_ntp_date') or '')[:4]}), under different "
+                    f"contractors.{detail}"
+                ),
+            })
+            break
 
     for i, flag in _cost_per_meter_flags(rows).items():
         flags[i].append(flag)

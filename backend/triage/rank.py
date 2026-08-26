@@ -32,7 +32,12 @@ VERDICT_WEIGHTS = {
 }
 
 FLAG_WEIGHTS = {
-    "duplicate_coordinates": 25,
+    # Co-location alone is common — 8% of Bulacan flood-control contracts sit
+    # within 10 m of another, because works run in sections along one river. So
+    # it is a note, not an allegation. The graded version below is the one that
+    # carries weight: two contracts both building new at the same point.
+    "duplicate_coordinates": 10,
+    "repeat_construction": 25,
     "cost_outlier": 15,
     "contractor_concentration": 8,
 }
