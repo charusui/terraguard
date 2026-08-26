@@ -3,15 +3,38 @@ import sys
 import os
 from datetime import datetime
 
-# Add the parent directory and backend directory to the path
-frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = os.path.dirname(frontend_dir)
-sys.path.insert(0, root_dir)
-sys.path.insert(0, os.path.join(root_dir, 'backend'))
+# ---------------------------------------------------------------------------
+# Path setup — must resolve on BOTH local dev AND Vercel's Lambda runtime.
+# See the detailed comment in analyze.py for the full explanation.
+# ---------------------------------------------------------------------------
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+_project_dir = os.path.dirname(_api_dir)
+_repo_root = os.path.dirname(_project_dir)
+
+for _p in [
+    _repo_root,
+    os.path.join(_repo_root, 'backend'),
+    _project_dir,
+    os.path.join(_project_dir, 'backend'),
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from http.server import BaseHTTPRequestHandler
-from backend.optical_fetch import get_nearest_clear_image
-from backend.vision_annotate import process_optical_image
+
+# Deferred import across the frontend/backend seam — see the note in analyze.py.
+# A missing backend/ comes back as a JSON error rather than a module-level crash.
+get_nearest_clear_image = None
+process_optical_image = None
+_import_error = None
+try:
+    from backend.optical_fetch import get_nearest_clear_image
+    from backend.vision_annotate import process_optical_image
+except Exception as _e:  # noqa: BLE001 — surfaced to the client below
+    _import_error = (
+        f"{type(_e).__name__}: {_e}. The backend/ package is not importable from "
+        f"the serverless function (sys.path={sys.path!r})."
+    )
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -24,6 +47,13 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+            return
+
+        if get_nearest_clear_image is None or process_optical_image is None:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": _import_error}).encode('utf-8'))
             return
 
         content_length = int(self.headers.get('Content-Length', 0))

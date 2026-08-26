@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { UploadSimple, DownloadSimple, FileCsv, Warning } from '@phosphor-icons/react';
 import { type AnalysisResult, type VerdictType, analyzeCoordinate } from '@/lib/mockData';
+import { toUserMessage, logTechnicalDetail } from '@/shared/utils/errorMessage';
 import LoadingState from './LoadingState';
 import { AnalyzeButton } from '@/shared/components/AnalyzeButton';
 
@@ -14,12 +15,16 @@ const FONT_BODY = "'Roboto', sans-serif";
 interface BatchRow { name: string; lat: number; lon: number; claimed_ntp_date: string; }
 type BatchResult = AnalysisResult & { error?: string };
 
+// Real projects with published audit findings, not invented rows. Coordinates
+// and contract start dates come from the DPWH transparency dataset; the
+// findings come from COA fraud-audit reporting. See backend/tests/verified_cases.py
+// for the per-case citation and the expected verdict each one is testing.
 const SAMPLE = `name,lat,lon,claimed_ntp_date
-Bulacan Road Rehab A,14.9021,120.8456,2023-01-15
-Bulacan Drainage B,14.8874,120.8312,2023-03-01
-Davao Bridge Approach,7.1907,125.4553,2022-06-01
-Manila Flood Control,14.5995,120.9842,2023-08-10
-Quezon City Sidewalk,14.6760,121.0437,2022-11-20`;
+Bambang Bocaue 24CC0149,14.76360,120.92071,2024-04-23
+Turo Bocaue 24CC0401,14.81336,120.94254,2024-04-23
+Sipat Plaridel 24CC0144,14.90360,120.82639,2024-03-20
+Slope Protection Pampanga,15.2215,120.5755,2016-06-01
+Betis River Pampanga,14.9818,120.6433,2022-06-01`;
 
 // Splits a CSV line on commas outside double quotes, so quoted project names
 // containing commas survive. Handles "" as an escaped quote.
@@ -60,6 +65,9 @@ function parseCSV(text: string): BatchRow[] {
 const VERDICT_CFG: Record<VerdictType, { label: string; accent: string }> = {
   PRE_EXISTING:       { label: 'Pre-existing', accent: 'var(--error)' },
   NO_CHANGE_DETECTED: { label: 'No change',    accent: 'var(--warning)' },
+  LOCATION_MISMATCH:  { label: 'Bad location', accent: 'var(--warning)' },
+  INSUFFICIENT_DATA:  { label: 'No data',       accent: 'var(--mute)' },
+  DELAYED_START:      { label: 'Delayed start', accent: 'var(--warning)' },
   CONSISTENT:         { label: 'Consistent',   accent: 'var(--success)' },
 };
 
@@ -144,6 +152,7 @@ export default function BatchMode() {
         const res = await analyzeCoordinate(rows[i].lat, rows[i].lon, rows[i].claimed_ntp_date, rows[i].name);
         out.push(res);
       } catch (e) {
+        logTechnicalDetail(`Batch row failed: ${rows[i].name}`, e);
         out.push({
           series: [],
           change_point: { detected_date: null, confidence: 0, days_difference: null },
@@ -152,7 +161,7 @@ export default function BatchMode() {
           claimed_date: rows[i].claimed_ntp_date,
           coordinates: { lat: rows[i].lat, lon: rows[i].lon },
           project_name: rows[i].name,
-          error: e instanceof Error ? e.message : 'Error',
+          error: toUserMessage(e),
         });
       }
       setResults([...out]);
@@ -192,6 +201,9 @@ export default function BatchMode() {
   const counts = {
     pre: ok.filter(r => r.verdict === 'PRE_EXISTING').length,
     no: ok.filter(r => r.verdict === 'NO_CHANGE_DETECTED').length,
+    delayed: ok.filter(r => r.verdict === 'DELAYED_START').length,
+    noData: ok.filter(r => r.verdict === 'INSUFFICIENT_DATA').length,
+    badLocation: ok.filter(r => r.verdict === 'LOCATION_MISMATCH').length,
     consistent: ok.filter(r => r.verdict === 'CONSISTENT').length,
     errors: results.length - ok.length,
   };
@@ -249,7 +261,7 @@ export default function BatchMode() {
             <div>
               <p className="t-micro-cap" style={{ marginBottom: '4px', fontFamily: FONT_BODY }}>CSV format</p>
               <code style={{ fontSize: '13px', color: 'var(--ink)', fontFamily: FONT_HEADING, letterSpacing: '0.01em' }}>name, lat, lon, claimed_ntp_date</code>
-              <p className="t-caption" style={{ marginTop: '4px', fontFamily: FONT_BODY }}>Drag a file in, paste below, or load a sample set.</p>
+              <p className="t-caption" style={{ marginTop: '4px', fontFamily: FONT_BODY }}>Drag a file in, paste below, or load a sample set. Sentinel-1 radar coverage begins October 2014 — rows with an earlier NTP date cannot be analysed.</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
@@ -314,6 +326,9 @@ export default function BatchMode() {
             {([
               { label: 'Pre-existing', val: counts.pre, color: 'var(--error)' },
               { label: 'No change', val: counts.no, color: 'var(--warning)' },
+              { label: 'Delayed start', val: counts.delayed, color: 'var(--warning)' },
+              ...(counts.badLocation > 0 ? [{ label: 'Bad location', val: counts.badLocation, color: 'var(--warning)' }] : []),
+              ...(counts.noData > 0 ? [{ label: 'No data', val: counts.noData, color: 'var(--mute)' }] : []),
               { label: 'Consistent', val: counts.consistent, color: 'var(--success)' },
               ...(counts.errors > 0 ? [{ label: 'Errors', val: counts.errors, color: 'var(--mute)' }] : []),
             ] as { label: string; val: number; color: string }[]).map((s, i) => (
@@ -338,10 +353,13 @@ export default function BatchMode() {
           <div style={{ height: '8px', borderRadius: '999px', overflow: 'hidden', display: 'flex', gap: '2px', background: 'var(--canvas-soft-2)' }}>
             {counts.pre > 0 && <div style={{ width: `${(counts.pre / total) * 100}%`, background: 'var(--error)' }} />}
             {counts.no > 0 && <div style={{ width: `${(counts.no / total) * 100}%`, background: 'var(--warning)' }} />}
+            {counts.delayed > 0 && <div style={{ width: `${(counts.delayed / total) * 100}%`, background: 'var(--warning)' }} />}
             {counts.consistent > 0 && <div style={{ width: `${(counts.consistent / total) * 100}%`, background: 'var(--success)' }} />}
           </div>
           <p style={{ margin: '8px 0 0', fontSize: '12px', fontFamily: FONT_BODY, color: 'var(--mute)' }}>
-            {counts.pre} of {ok.length} project{ok.length !== 1 ? 's' : ''} flagged as pre-existing
+            {counts.pre + counts.delayed} of {ok.length} project{ok.length !== 1 ? 's' : ''} flagged as off-timeline
+            {counts.pre > 0 && ` · ${counts.pre} pre-existing`}
+            {counts.delayed > 0 && ` · ${counts.delayed} delayed start`}
             {counts.errors > 0 && ` · ${counts.errors} failed to analyze`}
           </p>
         </div>

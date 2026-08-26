@@ -48,3 +48,6 @@ next-env.d.ts
 .netlify
 
 .vercel
+
+# Build-time copy of ../backend (see vercel.json buildCommand) — source of truth is <repo>/backend
+/backend

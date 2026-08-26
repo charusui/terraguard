@@ -53,6 +53,28 @@ TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF co
    DEMO_USERNAME=your_username
    DEMO_PASSWORD=your_password
    DEMO_AUTH_SECRET=your_secret_key
+
+   # Powers the AI assistant (natural-language lookup and result follow-ups)
+   GEMINI_API_KEY=your_gemini_key
+
+   # Lets the result assistant answer typed questions without turning on live
+   # GEE. The two need different credentials — the assistant needs only
+   # GEMINI_API_KEY — so this exists to switch the assistant on locally while
+   # the analysis itself still runs on mock data. Setting NEXT_PUBLIC_USE_REAL_GEE
+   # also enables it, which is why production needs no extra configuration.
+   NEXT_PUBLIC_ENABLE_AI_ASSISTANT=true
+
+   # TODO: not yet set. The AI assistant uses this to look up a project's
+   # contract start date. Sign up at https://serpapi.com/ (free tier: 100
+   # searches/month) and add the key here and in the Vercel project settings.
+   # Until it is set the assistant cannot prefill a date and the UI asks the
+   # operator to enter one by hand — nothing else is affected.
+   SERPAPI_API_KEY=
+
+   # Search results are labelled official / news / community by domain, and
+   # the UI says so. Set this to false to drop community-edited sources
+   # (wikis, forums, blog hosts) from results entirely.
+   ALLOW_COMMUNITY_SOURCES=true
    \`\`\`
 
 4. **Run the Next.js development server:**
@@ -60,6 +82,21 @@ TerraGuard uses **`ruptures.Pelt`** (Penalized Exact Linear Time) with an RBF co
    cd terraguard
    npm run dev
    \`\`\`
+
+   **Which env file is read, and by what.** There are two runtimes here and they
+   do not share environment variables:
+
+   | Runtime | Serves | Reads env from |
+   | :--- | :--- | :--- |
+   | \`next dev\` | \`src/\` and \`src/app/api/\` (TypeScript routes) | root \`.env\`, loaded by \`next.config.ts\` |
+   | \`vercel dev\` | the above **plus** \`frontend/api/*.py\` | \`frontend/.env.local\`, or \`vercel env pull\` |
+
+   The Python routes read \`os.environ\` in their own process, so a key in the
+   root \`.env\` never reaches them — and \`next dev\` does not serve them at all,
+   so \`/api/nl_query\` and \`/api/optical\` 404 under \`npm run dev\`. To exercise
+   those locally, put \`GEMINI_API_KEY\` in \`frontend/.env.local\` and run
+   \`vercel dev\`. In production the keys live in the Vercel project's
+   Environment Variables, which is the only place production reads.
 
 
 

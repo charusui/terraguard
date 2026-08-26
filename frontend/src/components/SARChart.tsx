@@ -24,6 +24,9 @@ function formatMonthYear(ms: number): string {
 // Interpolates the smoothed value at an arbitrary date so annotation dots land
 // exactly on the trend line even when that date falls between two SAR passes.
 function getSmoothedAtDate(series: SeriesPoint[], dateStr: string): number {
+  // Verdicts that decline to judge — no coverage, unusable coordinate — carry
+  // an empty series, and every lookup below indexes into it.
+  if (series.length === 0) return 0;
   const targetMs = new Date(dateStr).getTime();
   const sorted = [...series].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -116,13 +119,39 @@ const CustomTooltip = ({
 export default function SARChart({ result }: { result: AnalysisResult }) {
   const { series, claimed_date, change_point, verdict } = result;
 
+  // No passes to plot. The verdict banner above already explains why, so this
+  // says what the chart would have shown rather than leaving a blank panel.
+  if (series.length === 0) {
+    return (
+      <div
+        style={{
+          padding: '48px 24px', textAlign: 'center', borderRadius: '16px',
+          background: 'var(--canvas-soft)', border: '1px solid var(--hairline)',
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '14px', fontFamily: FONT_HEADING, color: 'var(--ink)' }}>
+          No radar time series to display
+        </p>
+        <p style={{ margin: '8px 0 0', fontSize: '13px', fontFamily: FONT_BODY, color: 'var(--mute)', lineHeight: 1.5 }}>
+          No Sentinel-1 passes were analysed for this location, so there is no
+          backscatter history to plot. See the verdict above for the reason.
+        </p>
+      </div>
+    );
+  }
+
   const chartData = series.map(p => ({ ...p, dateMs: new Date(p.date).getTime() }));
   const claimedMs = new Date(claimed_date).getTime();
 
   const changeColor =
     verdict === 'PRE_EXISTING' ? 'var(--error)' : verdict === 'CONSISTENT' ? 'var(--success)' : 'var(--warning)';
   const verdictLabel =
-    verdict === 'PRE_EXISTING' ? 'Pre-existing' : verdict === 'CONSISTENT' ? 'Consistent' : 'Needs review';
+    verdict === 'PRE_EXISTING' ? 'Pre-existing'
+    : verdict === 'CONSISTENT' ? 'Consistent'
+    : verdict === 'DELAYED_START' ? 'Delayed start'
+    : verdict === 'INSUFFICIENT_DATA' ? 'No data'
+    : verdict === 'LOCATION_MISMATCH' ? 'Bad location'
+    : 'Needs review';
   const VerdictIcon = verdict === 'CONSISTENT' ? CheckIcon : WarningIcon;
 
   const yMin = Math.floor(Math.min(...series.map(p => p.backscatter_db))) - 1;

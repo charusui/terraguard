@@ -2,15 +2,51 @@ import json
 import sys
 import os
 
-# Add the parent directory and backend directory to the path
-frontend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = os.path.dirname(frontend_dir)
-sys.path.insert(0, root_dir)
-sys.path.insert(0, os.path.join(root_dir, 'backend'))
+# ---------------------------------------------------------------------------
+# Path setup — must resolve on BOTH local dev AND Vercel's Lambda runtime.
+#
+# Local:  __file__ = <repo>/frontend/api/analyze.py
+#         project_dir  = <repo>/frontend
+#         repo_root    = <repo>           ← backend/ lives here
+#
+# Vercel: __file__ = /var/task/api/analyze.py
+#         project_dir  = /var/task
+#         repo_root    = /var             ← backend/ is NOT here
+#         includeFiles copies backend/ into /var/task/backend/
+#
+# We add both candidate directories so Python finds the modules either way.
+# ---------------------------------------------------------------------------
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+_project_dir = os.path.dirname(_api_dir)
+_repo_root = os.path.dirname(_project_dir)
+
+for _p in [
+    _repo_root,                            # local: <repo>
+    os.path.join(_repo_root, 'backend'),   # local: <repo>/backend
+    _project_dir,                          # Vercel: /var/task
+    os.path.join(_project_dir, 'backend'), # Vercel: /var/task/backend
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from http.server import BaseHTTPRequestHandler
 
-from backend.analyze import analyze
+# Import the analysis code across the frontend/backend seam. This is deferred
+# rather than fatal: if backend/ failed to make it into the bundle, we still want
+# a JSON error body so the UI can show the real reason instead of a bare 500.
+#
+# Note: no `from analyze import ...` fallback here — this module is itself named
+# `analyze`, so that import resolves to this file and dies with a confusing
+# partially-initialized-module error.
+analyze = None
+_import_error = None
+try:
+    from backend.analyze import analyze
+except Exception as _e:  # noqa: BLE001 — surfaced to the client below
+    _import_error = (
+        f"{type(_e).__name__}: {_e}. The backend/ package is not importable from "
+        f"the serverless function (sys.path={sys.path!r})."
+    )
 
 
 class handler(BaseHTTPRequestHandler):
@@ -24,6 +60,13 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+            return
+
+        if analyze is None:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": _import_error}).encode('utf-8'))
             return
 
         content_length = int(self.headers.get('Content-Length', 0))

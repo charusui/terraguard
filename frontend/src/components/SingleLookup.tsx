@@ -10,8 +10,11 @@ import LoadingState from './LoadingState';
 import ThinkingState from './ThinkingState';
 import PromptBar from './PromptBar';
 import OpticalVerification, { type OpticalData } from '@/features/analysis/components/OpticalVerification';
+import ResultExplanation from '@/features/analysis/components/ResultExplanation';
+import ResultAssistant from '@/features/analysis/components/ResultAssistant';
 import { Select } from '@/shared/components/Select';
 import { AnalyzeButton } from '@/shared/components/AnalyzeButton';
+import { toUserMessage, logTechnicalDetail } from '@/shared/utils/errorMessage';
 
 const SatelliteMark = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" viewBox="-0.0 -42.0 287.1 287.1"><g transform="translate(0.000000,203.000000) scale(0.100000,-0.100000)"><path d="M1733 1831 c-36 -22 -45 -44 -42 -98 2 -30 -6 -51 -36 -95 -21 -32
@@ -48,6 +51,21 @@ const SatelliteMark = () => (
 36z"></path></g></svg>
 );
 
+// Sentinel-1A reached its operational orbit in October 2014. Nothing earlier
+// can be analysed at all, so the UI states the limit up front rather than
+// letting an empty lookup come back looking like a finding.
+const SENTINEL1_COVERAGE_START = '2014-10-03';
+const SENTINEL1_COVERAGE_NOTE =
+  'Sentinel-1 radar coverage begins October 2014 — projects with an earlier NTP date cannot be analysed.';
+
+// Guards the date field. `<input type="date">` renders an unparseable value as
+// blank, so a bad string can sit in state looking like an empty field and still
+// be submitted — which is how "null" reached the backend's strptime.
+const isISODate = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+
 const PROGRESS_STEPS = [
   'Initializing GEE session...',
   'Querying COPERNICUS/S1_GRD collection...',
@@ -62,9 +80,15 @@ export default function AnalysisPanel() {
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<'known' | 'custom'>('known');
   const [selectedCase, setSelectedCase] = useState(KNOWN_CASES[0].name);
-  const [lat, setLat] = useState('14.5995');
-  const [lon, setLon] = useState('120.9842');
-  const [claimedDate, setClaimedDate] = useState('2023-06-01');
+  // Empty for the same reason as the date below: a prefilled Manila coordinate
+  // is a real place, so an unnoticed one produces a confident verdict about a
+  // site the operator never chose. The placeholders still show the format.
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  // Starts empty on purpose. A hardcoded default here is worse than a blank
+  // field: when the assistant cannot find a date, a plausible-looking one is
+  // left sitting in the box, and every verdict is measured against it.
+  const [claimedDate, setClaimedDate] = useState('');
   const [projectName, setProjectName] = useState('');
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -74,7 +98,7 @@ export default function AnalysisPanel() {
   const [nlQuery, setNlQuery] = useState('');
   const [aiParsing, setAiParsing] = useState(false);
   const [nlMessage, setNlMessage] = useState<string | null>(null);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [nlSource, setNlSource] = useState<string | null>(null);
   // Bumped at the start of each parse — remounts ThinkingState so its step
   // counter and timer reset for the new run without any reset-on-prop-
   // change logic inside that component.
@@ -89,6 +113,7 @@ export default function AnalysisPanel() {
     if (!nlQuery.trim()) return;
     setAiParsing(true);
     setNlMessage(null);
+    setNlSource(null);
     setParseRunId(id => id + 1);
     try {
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
@@ -100,30 +125,70 @@ export default function AnalysisPanel() {
         },
         body: JSON.stringify({ action: 'parse', text: nlQuery })
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error(`API returned non-JSON: ${text.slice(0, 100)}`); }
       if (data.error) throw new Error(data.error);
 
-      if (data.parsed.start_date) setClaimedDate(data.parsed.start_date);
-      if (data.parsed.location_name) setProjectName(data.parsed.location_name);
+      // Only accept a real ISO date. The parser can legitimately come back
+      // without one, and an unusable value here is what previously reached the
+      // date input as a blank field that still POSTed a bad string.
+      const foundDate = isISODate(data.parsed?.start_date) ? data.parsed.start_date : null;
+      // Clear on a miss as well as setting on a hit. Leaving the previous
+      // query's date in the box is how a verdict ends up measured against a
+      // date belonging to a different project.
+      setClaimedDate(foundDate ?? '');
+      if (data.parsed?.location_name) setProjectName(data.parsed.location_name);
 
-      if (data.geocoded.lat && data.geocoded.lon) {
+      const notes: string[] = [];
+
+      if (data.geocoded?.lat && data.geocoded?.lon) {
         setLat(data.geocoded.lat.toString());
         setLon(data.geocoded.lon.toString());
         if (data.geocoded.display_name) {
-          setNlMessage(`Showing results for ${data.geocoded.display_name} — not what you meant? Enter coordinates directly.`);
+          notes.push(`Showing results for ${data.geocoded.display_name} — not what you meant? Enter coordinates directly.`);
         }
       } else {
-        setNlMessage(`Could not find coordinates for "${data.parsed.location_name || 'that location'}". Please enter them manually.`);
+        notes.push(`Could not find coordinates for "${data.parsed?.location_name || 'that location'}". Please enter them manually.`);
       }
+
+      const lookup = data.ntp_lookup;
+      if (foundDate && lookup?.searched && lookup?.date) {
+        // Name the milestone rather than implying it is a true NTP date — a
+        // groundbreaking date and a Notice-to-Proceed are not the same evidence.
+        const label = lookup.date_label ?? 'project start date';
+        // Say where the date came from. A community-edited page is a lead, not
+        // a record, and an operator should not have to check the URL to know.
+        const provenance =
+          lookup.source_authority === 'community'
+            ? ' The source is a community-edited page, so treat it as a lead rather than a record.'
+            : lookup.source_authority === 'official'
+              ? ' The source appears to be an official record.'
+              : '';
+        notes.push(
+          `Filled in ${foundDate} from a web search — this is the ${label}, not a verified contract record.${provenance} Confirm it against your own documents before relying on the verdict.`
+        );
+      } else if (!foundDate && lookup?.searched) {
+        notes.push('No start date for this project could be found on the web, so please enter the contract NTP date yourself.');
+      } else if (!foundDate) {
+        notes.push('No NTP date was given, so please enter the contract date before running the analysis.');
+      }
+
+      setNlSource(foundDate && lookup?.date ? lookup.source_url ?? null : null);
+      setNlMessage(notes.join(' '));
     } catch (e) {
-      setNlMessage(`AI Parsing failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      logTechnicalDetail('NL query failed', e);
+      setNlSource(null);
+      setNlMessage(
+        'The AI assistant could not read that request. Try naming the project and location directly, or enter the coordinates and date yourself.'
+      );
     } finally {
       setAiParsing(false);
     }
   };
 
   const handleAnalyze = async () => {
-    setLoading(true); setResult(null); setError(null); setProgressStep(0); setAiSummary(null);
+    setLoading(true); setResult(null); setError(null); setProgressStep(0);
     try {
       let finalLat: number, finalLon: number, finalDate: string, finalName: string;
       if (mode === 'known') {
@@ -133,31 +198,33 @@ export default function AnalysisPanel() {
       } else {
         finalLat = parseFloat(lat); finalLon = parseFloat(lon);
         finalDate = claimedDate; finalName = projectName || 'Custom Lookup';
-        if (isNaN(finalLat) || isNaN(finalLon)) throw new Error('Invalid coordinates');
+        if (isNaN(finalLat) || isNaN(finalLon)) {
+          setError('Enter a valid latitude and longitude as decimal numbers, for example 14.5995 and 120.9842.');
+          setLoading(false);
+          return;
+        }
+        if (!isISODate(finalDate)) {
+          setError('Choose a contract NTP date before running the analysis — it is the date the satellite record is measured against.');
+          setLoading(false);
+          return;
+        }
+        if (finalDate < SENTINEL1_COVERAGE_START) {
+          setError(SENTINEL1_COVERAGE_NOTE);
+          setLoading(false);
+          return;
+        }
       }
       // Simulate progress
       for (let i = 0; i < PROGRESS_STEPS.length; i++) {
         await new Promise(r => setTimeout(r, 400));
         setProgressStep(i);
       }
-      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName);
+      const res = await analyzeCoordinate(finalLat, finalLon, finalDate, finalName,
+        mode === 'known' ? KNOWN_CASES.find(c => c.name === selectedCase)?.scenario : undefined
+      );
       setResult(res);
 
-      // Request AI summary in the background
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('tg_token') ?? '' : '';
-      fetch('/api/nl_query', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'summarize', verdict: res })
-      })
-      .then(r => r.json())
-      .then(d => {
-        if (d.summary) setAiSummary(d.summary);
-      })
-      .catch(console.error);
 
       // Request Optical Verification in the background
       const targetDate = res.change_point.detected_date || res.claimed_date;
@@ -175,12 +242,15 @@ export default function AnalysisPanel() {
           body: JSON.stringify({ lat: res.coordinates.lat, lon: res.coordinates.lon, detected_date: targetDate })
         })
         .then(async r => {
-          const d = await r.json();
+          const t = await r.text();
+          let d;
+          try { d = JSON.parse(t); } catch { throw new Error(`Optical API returned non-JSON (HTTP ${r.status})`); }
           if (!r.ok) throw new Error(d.error || 'Failed to fetch optical verification');
           setOpticalData(d);
         })
         .catch(err => {
-          setOpticalError(err.message);
+          logTechnicalDetail('Optical verification failed', err);
+          setOpticalError(toUserMessage(err));
         })
         .finally(() => {
           setOpticalLoading(false);
@@ -205,7 +275,8 @@ export default function AnalysisPanel() {
       }
 
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Analysis failed');
+      logTechnicalDetail('Analysis failed', e);
+      setError(toUserMessage(e));
     } finally {
       setLoading(false);
     }
@@ -290,9 +361,25 @@ export default function AnalysisPanel() {
                       activeLabel="Extracting fields"
                     />
                   )}
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--mute)' }}>
+                    {SENTINEL1_COVERAGE_NOTE}
+                  </p>
                   {nlMessage && !aiParsing && (
-                    <div style={{ fontSize: '12px', color: 'var(--mute)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--mute)', lineHeight: 1.5 }}>
                       {nlMessage}
+                      {nlSource && (
+                        <>
+                          {' '}
+                          <a
+                            href={nlSource}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--ink)', textDecoration: 'underline' }}
+                          >
+                            View source
+                          </a>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -300,22 +387,32 @@ export default function AnalysisPanel() {
                 <div className="hairline" />
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                  {[
+                  {([
                     { label: 'Latitude', val: lat, set: setLat, ph: '14.5995' },
                     { label: 'Longitude', val: lon, set: setLon, ph: '120.9842' },
-                    { label: 'Contract NTP Date', val: claimedDate, set: setClaimedDate, type: 'date' },
+                    {
+                      label: 'Contract NTP Date', val: claimedDate, set: setClaimedDate, type: 'date',
+                      min: SENTINEL1_COVERAGE_START, hint: 'Radar coverage starts Oct 2014',
+                    },
                     { label: 'Project Name', val: projectName, set: setProjectName, ph: 'Optional' },
-                  ].map(f => (
+                  ] as {
+                    label: string; val: string; set: (v: string) => void;
+                    ph?: string; type?: string; min?: string; hint?: string;
+                  }[]).map(f => (
                     <div key={f.label}>
                       <label className="t-micro-cap" style={{ display: 'block', marginBottom: '8px' }}>{f.label}</label>
                       <input
                         className="field"
                         type={f.type ?? 'text'}
                         value={f.val}
+                        min={f.min}
                         onChange={e => f.set(e.target.value)}
                         placeholder={f.ph}
                         style={{ width: '100%' }}
                       />
+                      {f.hint && (
+                        <p style={{ margin: '6px 0 0', fontSize: '11px', color: 'var(--mute)' }}>{f.hint}</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -398,6 +495,20 @@ export default function AnalysisPanel() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           style={{ display: 'flex', flexDirection: 'column', gap: '0' }}
         >
+          {result.site_check && !result.site_check.is_plausible && (
+            <div style={{
+              display: 'flex', gap: '10px', alignItems: 'flex-start',
+              padding: '14px 16px', marginBottom: '20px', borderRadius: '12px',
+              background: 'var(--canvas-soft)', border: '1px solid var(--warning)',
+            }}>
+              <Warning size={16} weight="bold" style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'var(--ink)' }}>
+                {result.site_check.reason} The verdict below still reflects what the
+                satellite recorded at this point, so weigh it against that doubt.
+              </p>
+            </div>
+          )}
+
           <VerdictBanner result={result} />
 
           <div className="hairline" style={{ margin: '40px 0' }} />
@@ -410,19 +521,12 @@ export default function AnalysisPanel() {
 
           <div className="hairline" style={{ margin: '40px 0' }} />
 
-          {/* Explanation (Top 3 possibilities) */}
-          <div style={{ marginBottom: '40px' }}>
-            <p className="t-body-lg" style={{ maxWidth: '680px', color: 'var(--ink)', whiteSpace: 'pre-wrap', fontFamily: "'Roboto', sans-serif" }}>
-              {result.explanation}
-            </p>
-          </div>
+          {/* The written finding, with the possibilities folded behind a toggle. */}
+          <ResultExplanation explanation={result.explanation} />
 
-          {aiSummary && (
-            <div style={{ marginTop: '40px', padding: '24px', background: 'var(--canvas-soft)', borderRadius: '8px', borderLeft: '2px solid var(--ink)' }}>
-              <div className="t-micro-cap" style={{ marginBottom: '8px' }}>AI SUMMARY</div>
-              <p className="t-body" style={{ color: 'var(--body)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{aiSummary}</p>
-            </div>
-          )}
+          {/* Follow-up questions about that finding. Deliberately does not
+              restate it — ResultExplanation above already has. */}
+          <ResultAssistant result={result} />
 
 
           {/* OPTICAL VERIFICATION LAYER */}

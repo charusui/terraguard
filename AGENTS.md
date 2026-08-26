@@ -180,17 +180,17 @@ Then open a PR with `main` as the base.
 Every commit message starts with one of these prefixes, so the log can be skimmed and released
 from:
 
-| Prefix | For |
-| :--- | :--- |
-| `add:` | a new feature or capability |
-| `fix:` | a bug or broken behavior |
-| `update:` | improving something that already exists |
-| `refactor:` | restructuring with no behavior change |
-| `delete:` | removing code, features, or files |
-| `docs:` | documentation |
-| `test:` | tests |
-| `chore:` | maintenance |
-| `config:` | configuration files |
+| Prefix      | For                                     |
+| :---------- | :-------------------------------------- |
+| `add:`      | a new feature or capability             |
+| `fix:`      | a bug or broken behavior                |
+| `update:`   | improving something that already exists |
+| `refactor:` | restructuring with no behavior change   |
+| `delete:`   | removing code, features, or files       |
+| `docs:`     | documentation                           |
+| `test:`     | tests                                   |
+| `chore:`    | maintenance                             |
+| `config:`   | configuration files                     |
 
 If `main` moved while you were working, rebase rather than merge so history stays linear:
 
