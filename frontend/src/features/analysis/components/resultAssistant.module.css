@@ -1,0 +1,373 @@
+/* Layout and interactive states for the result assistant.
+ *
+ * Geometry lives here rather than inline because inline styles cannot express
+ * media queries — the block has to reflow on a phone, and a `style` prop can
+ * only ever describe one width. Breakpoints match the ones already in
+ * globals.css (768 / 640 / 480) rather than introducing a new scale.
+ *
+ * Every colour goes through a token, so both themes follow automatically. */
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto 8px;
+}
+
+.eyebrow {
+  color: var(--mute);
+  margin: 0 0 14px;
+}
+
+.card {
+  background: var(--canvas-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────
+   Wraps rather than truncates: on a narrow screen the project name drops to
+   its own line instead of being ellipsed down to two characters. */
+.header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 11px;
+  padding: 15px 22px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.headerName {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.project {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 50%;
+  color: var(--mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logoChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--canvas-soft-2);
+  border: 1px solid var(--hairline);
+}
+
+.logoInner {
+  position: relative;
+  width: 17px;
+  height: 17px;
+}
+
+/* ── Thread ── */
+.body {
+  padding: 22px;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.answer {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--ink);
+  white-space: pre-wrap;
+  /* A pasted coordinate or URL must not push the card wider than the screen. */
+  overflow-wrap: anywhere;
+}
+
+.answerMuted {
+  color: var(--mute);
+}
+
+.userRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.userChip {
+  max-width: 82%;
+  padding: 9px 15px;
+  border-radius: 14px;
+  background: var(--canvas-soft-2);
+  border: 1px solid var(--hairline);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--body);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 10px 0 0 -6px;
+}
+
+/* ── Follow-up rows ─────────────────────────────────────────────────────────
+   Full-bleed rows rather than pills: the questions are sentences, and a wrapped
+   row of sentence-length pills reads as clutter. The negative inline margin
+   lets the hover fill reach past the card padding without the text moving.
+   Top-aligned so the arrow stays with the first line when a question wraps. */
+.followups {
+  margin-top: 26px;
+}
+
+.followupsLabel {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute);
+}
+
+.followupList {
+  display: flex;
+  flex-direction: column;
+}
+
+.followup {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: calc(100% + 20px);
+  margin: 0 -10px;
+  padding: 11px 10px;
+  border: none;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Optically centres the arrow on the first line of a wrapped question. */
+.followup svg {
+  margin-top: 4px;
+}
+
+.followup:hover:not(:disabled) {
+  background: var(--canvas-soft-2);
+}
+
+.followup:focus-visible {
+  outline: none;
+  background: var(--canvas-soft-2);
+  box-shadow: 0 0 0 1px var(--hairline-strong);
+}
+
+.followup:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* ── Composer ───────────────────────────────────────────────────────────────
+   Focus lands on the wrapper rather than the bare input, so the whole pill
+   responds instead of a rectangle appearing inside a rounded shape. */
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 10px 10px 10px 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  background: var(--canvas);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.composer:focus-within {
+  border-color: var(--hairline-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hairline) 45%, transparent);
+}
+
+.composerInput {
+  flex: 1;
+  /* Inputs carry a default intrinsic width that refuses to shrink inside a
+     flex row; without this the composer forces the card wider than the phone. */
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.composerInput::placeholder {
+  color: var(--mute);
+}
+
+.composerInput:disabled {
+  cursor: default;
+}
+
+.disclaimer {
+  margin: 12px 0 0;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+
+/* ── Buttons ── */
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--hairline);
+  background: var(--canvas-soft-2);
+  color: var(--mute);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.2s ease;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--canvas);
+}
+
+.send:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--hairline-strong);
+}
+
+.send:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.iconButton:hover {
+  background: var(--canvas-soft-2);
+  color: var(--ink);
+}
+
+.iconButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--hairline-strong);
+}
+
+/* Retry pill, shown only on a failed answer. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 7px 15px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--mute);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pill:hover:not(:disabled) {
+  background: var(--canvas-soft-2);
+  color: var(--ink);
+}
+
+.pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--hairline-strong);
+}
+
+.pill:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* ── Narrow screens ─────────────────────────────────────────────────────────
+   The card keeps its shape; only the breathing room and the header layout
+   change. Tighter radii read better once the card is nearly full-bleed. */
+@media (max-width: 640px) {
+  .card {
+    border-radius: 16px;
+  }
+
+  .header {
+    gap: 9px;
+    padding: 13px 16px;
+  }
+
+  .body {
+    padding: 16px;
+  }
+
+  .composer {
+    padding: 9px 9px 9px 15px;
+  }
+
+  .userChip {
+    max-width: 92%;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Drops to its own line rather than being ellipsed into nothing. */
+  .project {
+    flex-basis: 100%;
+    margin-left: 0;
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  .thread {
+    gap: 15px;
+  }
+
+  .followups {
+    margin-top: 20px;
+  }
+
+  .answer,
+  .userChip {
+    font-size: 13px;
+  }
+}

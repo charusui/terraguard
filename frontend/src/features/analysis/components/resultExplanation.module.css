@@ -1,0 +1,153 @@
+/* Layout and interactive states for the explanation expander. Same reasoning
+   as resultAssistant.module.css: geometry lives here so it can respond to
+   width, and every colour goes through a token so both themes follow. */
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto 36px;
+}
+
+.eyebrow {
+  color: var(--mute);
+  margin: 0 0 14px;
+}
+
+.card {
+  background: var(--canvas-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 22px;
+}
+
+.lead {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 7px 15px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--mute);
+  font-family: var(--font-body);
+  font-size: 12px;
+  /* Wraps instead of overflowing once the label is wider than the card. */
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* No lead above it means nothing to sit under. */
+.toggleFlush {
+  margin-top: 0;
+}
+
+.toggle:hover {
+  background: var(--canvas-soft-2);
+  color: var(--ink);
+}
+
+.toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--hairline-strong);
+}
+
+/* The caret is the only thing that moves, so it opts out on its own rather
+   than the whole button carrying a transition. */
+.caret {
+  transition: transform 0.2s ease;
+}
+
+.panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+.rest {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--body);
+  overflow-wrap: anywhere;
+}
+
+.possibilitiesLabel {
+  margin: 24px 0 12px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute);
+}
+
+/* Nothing above it when the summary was entirely in the lead. */
+.possibilitiesLabelFlush {
+  margin-top: 0;
+}
+
+.possibilityList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.possibility {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--body);
+  overflow-wrap: anywhere;
+}
+
+.possibilityLabel {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    margin-bottom: 28px;
+  }
+
+  .card {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .lead {
+    font-size: 14.5px;
+  }
+
+  .rest {
+    font-size: 13.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .possibility {
+    font-size: 13px;
+  }
+
+  .possibilitiesLabel {
+    margin-top: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    transition: none;
+  }
+}

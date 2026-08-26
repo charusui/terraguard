@@ -73,6 +73,9 @@ export interface KnownCase {
   source: string;
   source_url?: string;
   description: string;
+  // Expected verdict for mock mode — pins the demo result to the real finding
+  // so localhost always shows the right scenario regardless of coordinate hash.
+  scenario?: VerdictType;
 }
 
 // Known COA-flagged case studies (Real-world coordinates for testing the SAR engine)
@@ -90,6 +93,7 @@ export const KNOWN_CASES: KnownCase[] = [
     source: 'COA fraud audit, contract 24CC0149',
     source_url: 'https://www.philstar.com/nation/2025/09/26/2475562/irregularities-detailed-audit-reports-bulacan-flood-control-projects',
     description: 'COA found satellite imagery from 29 February 2024 — two months before the 23 April Notice-to-Proceed — already showing a flood control structure at the approved site. A P98.99M joint venture.',
+    scenario: 'PRE_EXISTING',
   },
   {
     name: 'Sipat Section, Plaridel — Angat River (Ghost Project)',
@@ -99,6 +103,7 @@ export const KNOWN_CASES: KnownCase[] = [
     source: 'COA fraud audit, contract 24CC0144',
     source_url: 'https://newsinfo.inquirer.net/2111439/coa-fraud-audit-tags-4-more-flood-infra-projects-in-bulacan',
     description: 'Reported complete on 11 June 2024, but historical satellite imagery showed no flood control structure at the site as of 7 April 2025. Undertaken by Wawao Builders.',
+    scenario: 'NO_CHANGE_DETECTED',
   },
   {
     name: 'Betis River Slope Protection, Guagua (Legitimate)',
@@ -108,6 +113,7 @@ export const KNOWN_CASES: KnownCase[] = [
     source: 'DPWH contract 22CH0082 / Wikimedia Commons',
     source_url: 'https://commons.wikimedia.org/wiki/File:Flood_protection_in_Betis_River_(Pampanga;_2023-08-22)_E911a_08.jpg',
     description: 'A legitimate project with construction photo-documented on site, running 1 June to 27 November 2022. The engine detects ground disturbance 22 days before the Notice-to-Proceed — routine mobilisation — and reports the timeline as consistent.',
+    scenario: 'CONSISTENT',
   },
 ];
 
@@ -251,8 +257,10 @@ export async function analyzeCoordinate(
 
   let resolvedScenario: VerdictType;
   if (scenario) {
+    // Caller passed an explicit scenario (e.g. from a known case's pinned verdict).
     resolvedScenario = scenario;
   } else {
+    // Custom lookup — derive a stable but arbitrary scenario from the coordinates.
     const hash = Math.abs(Math.round(lat * 100 + lon * 10)) % 3;
     resolvedScenario = hash === 0 ? 'PRE_EXISTING' : hash === 1 ? 'NO_CHANGE_DETECTED' : 'CONSISTENT';
   }
@@ -260,6 +268,12 @@ export async function analyzeCoordinate(
   const series = generateSARSeries(claimedDate, resolvedScenario);
   const changePoint = getDetectedDate(series, resolvedScenario, claimedDate);
   const explanation = getExplanation(resolvedScenario, changePoint);
+
+  // PRE_EXISTING mock: synthesise level-based evidence so VerdictBanner renders
+  // the signal tiles and the confidence ring correctly without a real GEE response.
+  const mockPriorStructure = resolvedScenario === 'PRE_EXISTING'
+    ? { exists_before_ntp: false, pre_ntp_db: null, post_ntp_db: null, rise_db: null }
+    : undefined;
 
   return {
     series,
@@ -269,6 +283,7 @@ export async function analyzeCoordinate(
     claimed_date: claimedDate,
     coordinates: { lat, lon },
     project_name: projectName,
+    prior_structure: mockPriorStructure,
   };
 }
 
