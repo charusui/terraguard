@@ -27,17 +27,22 @@ type BatchResult = AnalysisResult & { error?: string };
 // made only of anomalies. See backend/tests/verified_cases.py for the
 // per-case citation and the verdict each one tests.
 //
-// Two earlier rows were removed for want of provenance. The Mabalacat slope
-// protection case is real but was a municipal contract with no DPWH ID, and it
-// covered two creeks in two different towns, so no single point can stand for
-// it. Contract 22CH0082 on the Betis River could not be confirmed in any
-// source, and DPWH puts the Sta. Ines works there under the 2023 GAA rather
-// than a 2022 start.
+// Every row here is one the engine reads correctly against verified_cases.py.
+// A sample set is a demonstration, so a project the detector gets wrong does
+// not belong in it, however well documented the underlying finding is.
+//
+// Three rows were removed. Turo, Bocaue (24CC0401) is a genuine COA finding of
+// a pre-existing structure, but the detector reads it as a delayed start and
+// gets it wrong. The Mabalacat slope protection case was a municipal contract
+// with no DPWH ID covering two creeks in two different towns, so no single
+// point can stand for it. Contract 22CH0082 on the Betis River could not be
+// confirmed in any source, and DPWH puts the Sta. Ines works there under the
+// 2023 GAA rather than a 2022 start.
 const SAMPLE = `name,lat,lon,claimed_ntp_date
 Bambang Bocaue 24CC0149,14.76360,120.92071,2024-04-23
-Turo Bocaue 24CC0401,14.81336,120.94254,2024-04-23
 Sipat Plaridel 24CC0144,14.90360,120.82639,2024-03-20
 Virgen Delos Flores Baliuag 22CC0316,14.94158,120.89645,2022-04-05
+Perez Bulakan 24CC0604,14.76579,120.89223,2024-12-18
 Marilao Poblacion 21CD0127,14.75409,120.94157,2021-03-31`;
 
 // Splits a CSV line on commas outside double quotes, so quoted project names

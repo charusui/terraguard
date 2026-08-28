@@ -38,12 +38,16 @@ tuned against outcomes; see VALIDATION when that exists.
 # case on the level, which leaves EARLY_START a cleaner reading of genuine
 # early work.
 #
-# Neither start anomaly reaches MEDIUM_PRIORITY_SCORE on the verdict alone.
-# Both want a contract-table flag to corroborate them before anyone drives out.
+# DELAYED_START clears MEDIUM_PRIORITY_SCORE on the verdict alone. At its old
+# 22 it missed the band by three points, which buried projects reported
+# complete and paid while the ground stayed untouched for months. If a delayed
+# start really is the partial-ghost case, it cannot rank as something nobody
+# needs to look at. EARLY_START stays below the band and wants a contract-table
+# flag to corroborate it before anyone drives out.
 VERDICT_WEIGHTS = {
     "PRE_EXISTING_STRUCTURE": 40,
     "NO_CHANGE_DETECTED": 38,
-    "DELAYED_START": 22,
+    "DELAYED_START": 28,
     "EARLY_START": 15,
     "LOCATION_MISMATCH": 12,
     "INSUFFICIENT_DATA": 0,
