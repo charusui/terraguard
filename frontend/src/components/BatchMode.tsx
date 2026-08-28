@@ -19,16 +19,26 @@ const FONT_BODY = "'Roboto', sans-serif";
 interface BatchRow { name: string; lat: number; lon: number; claimed_ntp_date: string; }
 type BatchResult = AnalysisResult & { error?: string };
 
-// Real projects with published audit findings, not invented rows. Coordinates
-// and contract start dates come from the DPWH transparency dataset; the
-// findings come from COA fraud-audit reporting. See backend/tests/verified_cases.py
-// for the per-case citation and the expected verdict each one is testing.
+// Real projects, not invented rows. Every row carries a DPWH contract ID, so
+// its coordinates and Notice-to-Proceed date come from the published
+// transparency dataset rather than from an estimate. The first four have COA
+// fraud-audit findings against them; the last is a completed contract by a
+// contractor absent from every COA flagged list, included so the batch is not
+// made only of anomalies. See backend/tests/verified_cases.py for the
+// per-case citation and the verdict each one tests.
+//
+// Two earlier rows were removed for want of provenance. The Mabalacat slope
+// protection case is real but was a municipal contract with no DPWH ID, and it
+// covered two creeks in two different towns, so no single point can stand for
+// it. Contract 22CH0082 on the Betis River could not be confirmed in any
+// source, and DPWH puts the Sta. Ines works there under the 2023 GAA rather
+// than a 2022 start.
 const SAMPLE = `name,lat,lon,claimed_ntp_date
 Bambang Bocaue 24CC0149,14.76360,120.92071,2024-04-23
 Turo Bocaue 24CC0401,14.81336,120.94254,2024-04-23
 Sipat Plaridel 24CC0144,14.90360,120.82639,2024-03-20
-Slope Protection Pampanga,15.2215,120.5755,2016-06-01
-Betis River Pampanga,14.9818,120.6433,2022-06-01`;
+Virgen Delos Flores Baliuag 22CC0316,14.94158,120.89645,2022-04-05
+Marilao Poblacion 21CD0127,14.75409,120.94157,2021-03-31`;
 
 // Splits a CSV line on commas outside double quotes, so quoted project names
 // containing commas survive. Handles "" as an escaped quote.

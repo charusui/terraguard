@@ -14,8 +14,25 @@ const FONT_BODY = "'Roboto', sans-serif";
 const PRIORITY: Record<TriagePriority, { label: string; accent: string }> = {
   high: { label: 'Visit first', accent: 'var(--error)' },
   medium: { label: 'Worth checking', accent: 'var(--warning)' },
-  low: { label: 'No action', accent: 'var(--success)' },
+  low: { label: 'Low priority', accent: 'var(--mute)' },
 };
+
+// Clearing a row is a claim, and only one verdict supports it. CONSISTENT
+// means the satellite watched the site and the timeline held. Nothing else
+// does, including the other verdicts that score zero: an unreadable site also
+// scores zero, and telling an auditor there is no action on a project nobody
+// could measure is the tool reporting a check it never made.
+const CLEARED = { label: 'No action', accent: 'var(--success)' };
+const NOT_ASSESSED = { label: 'Not assessed', accent: 'var(--mute)' };
+const RECORDS_FIRST = { label: 'Fix the record', accent: 'var(--warning)' };
+
+function bandFor(entry: TriageEntry): { label: string; accent: string } {
+  if (entry.verdict === 'CONSISTENT') return CLEARED;
+  // Neither of these is a finding about the works, and neither is a clearance.
+  if (entry.verdict === 'INSUFFICIENT_DATA') return NOT_ASSESSED;
+  if (entry.verdict === 'LOCATION_MISMATCH') return RECORDS_FIRST;
+  return PRIORITY[entry.priority];
+}
 
 // How many rows to show before the list collapses. An auditor reads the top of
 // a worklist; the rest is there to be exported, not scrolled.
@@ -53,7 +70,7 @@ function ScoreBar({ score, accent }: { score: number; accent: string }) {
 
 function WorklistRow({ entry, result, position }: { entry: TriageEntry; result?: AnalysisResult; position: number }) {
   const reduce = useReducedMotion();
-  const { label, accent } = PRIORITY[entry.priority];
+  const { label, accent } = bandFor(entry);
   const coordinates = result?.coordinates;
 
   return (
@@ -128,8 +145,24 @@ export default function RankedWorklist({ triage, results }: Props) {
   const [showAll, setShowAll] = useState(false);
   const { ranked, summary } = triage;
 
-  const actionable = ranked.filter(entry => entry.priority !== 'low');
-  const visible = showAll ? ranked : actionable.slice(0, VISIBLE_ROWS);
+  // Anything that scored raised a finding, so it belongs in the default view
+  // even when it ranks low. Filtering on the band alone hid delayed and early
+  // starts entirely, which is how a real finding became invisible.
+  const withFindings = ranked.filter(entry => entry.score > 0);
+  // A site the satellite could not read scores zero but is not cleared, so it
+  // travels with the worklist rather than disappearing out of it.
+  const notAssessed = ranked.filter(entry => entry.verdict === 'INSUFFICIENT_DATA');
+  const openRows = ranked.filter(
+    entry => entry.score > 0 || entry.verdict === 'INSUFFICIENT_DATA',
+  );
+  const visible = showAll ? ranked : openRows.slice(0, VISIBLE_ROWS);
+
+  const headline =
+    withFindings.length > 0
+      ? `${withFindings.length} of ${summary.total} project${summary.total === 1 ? '' : 's'} raised a finding, ranked by how far the record and the satellite disagree.`
+      : notAssessed.length > 0
+        ? `No findings across ${summary.total} projects, though ${notAssessed.length} could not be assessed from the satellite record.`
+        : `All ${summary.total} projects match their contract records.`;
 
   const exportWorklist = () => {
     downloadCsv(
@@ -159,9 +192,7 @@ export default function RankedWorklist({ triage, results }: Props) {
             Site-visit worklist
           </h3>
           <p className="t-body" style={{ color: 'var(--body)', fontFamily: FONT_BODY, margin: 0 }}>
-            {summary.flagged === 0
-              ? `All ${summary.total} projects match their contract records.`
-              : `${summary.flagged} of ${summary.total} project${summary.total === 1 ? '' : 's'} warrant a look, ranked by how far the record and the satellite disagree.`}
+            {headline}
           </p>
         </div>
         <button className="btn-ghost" onClick={exportWorklist} style={{ height: '36px', borderRadius: '999px', fontFamily: FONT_BODY }}>
