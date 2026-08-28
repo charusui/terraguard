@@ -29,8 +29,17 @@ said DPWH-published coordinates were manipulated for some projects, so a point
 may not sit on the structure it names.
 """
 
+# The five tier-A cases below expect PRE_EXISTING_STRUCTURE rather than
+# EARLY_START because COA found a structure already standing at the site, not
+# work that began ahead of schedule. That is a stricter assertion than the old
+# single PRE_EXISTING verdict made: a case the engine now calls EARLY_START
+# counts as a MISS where it used to pass. That is the intended signal — it means
+# the detector found a dated event where the auditors found a pre-existing
+# structure — but it will move the tier-A number, so read a drop here as the
+# split doing its job rather than as a regression.
+
 # Verdicts that mean "something is off here".
-ANOMALOUS = {"PRE_EXISTING", "NO_CHANGE_DETECTED", "DELAYED_START"}
+ANOMALOUS = {"PRE_EXISTING_STRUCTURE", "EARLY_START", "NO_CHANGE_DETECTED", "DELAYED_START"}
 
 # Verdicts that decline to judge. Not counted as wrong — the engine saying
 # "I cannot read this site" is the correct output when the input is unusable.
@@ -63,28 +72,28 @@ CASES = [
     {
         "name": "Bambang, Bocaue (slope protection)", "contract_id": "24CC0149",
         "lat": 14.76360, "lon": 120.92071, "claimed_ntp_date": "2024-04-23",
-        "expected": "PRE_EXISTING", "tier": "A",
+        "expected": "PRE_EXISTING_STRUCTURE", "tier": "A",
         "finding": "Satellite imagery from 29 Feb 2024, two months before the 23 Apr NTP, already showed a structure at the approved site.",
         "source": PHILSTAR_SEP26,
     },
     {
         "name": "Turo (Sitio Hangga), Bocaue", "contract_id": "24CC0401",
         "lat": 14.81336, "lon": 120.94254, "claimed_ntp_date": "2024-04-23",
-        "expected": "PRE_EXISTING", "tier": "A",
+        "expected": "PRE_EXISTING_STRUCTURE", "tier": "A",
         "finding": "Approved location already had an existing structure; what was built deviated from the plans.",
         "source": PHILSTAR_SEP26,
     },
     {
         "name": "Malis Section, Guiguinto River", "contract_id": "24CC0142",
         "lat": 14.83255, "lon": 120.87768, "claimed_ntp_date": "2024-03-20",
-        "expected": "PRE_EXISTING", "tier": "A",
+        "expected": "PRE_EXISTING_STRUCTURE", "tier": "A",
         "finding": "A flood control structure already existed at the approved site years before contract effectivity.",
         "source": BMIRROR_P297,
     },
     {
         "name": "Lumang Bayan Section, Angat River", "contract_id": "24CC0468",
         "lat": 14.89894, "lon": 120.85426, "claimed_ntp_date": "2024-05-28",
-        "expected": "PRE_EXISTING", "tier": "A",
+        "expected": "PRE_EXISTING_STRUCTURE", "tier": "A",
         "finding": "Existing structures at the site at least 90 days before contract effectivity, per satellite imagery and inspection.",
         "source": GMA_P309,
     },
@@ -119,7 +128,7 @@ CASES = [
     {
         "name": "Slope Protection Works, Pampanga", "contract_id": None,
         "lat": 15.2215, "lon": 120.5755, "claimed_ntp_date": "2016-06-01",
-        "expected": "PRE_EXISTING", "tier": "A",
+        "expected": "PRE_EXISTING_STRUCTURE", "tier": "A",
         "finding": "A wall already being built by DPWH was awarded again by the local government; P92.5M ordered returned.",
         "source": "https://www.philstar.com/nation/2019/01/17/1885650/return-p925-million-ex-pampanga-mayor-told",
     },
@@ -244,7 +253,7 @@ def main() -> None:
         distance = (result.get("site_check") or {}).get("water_distance_m")
         water = f"{distance:>6.0f}m" if distance is not None else "     -"
         print(f"[{case['tier']}] {case['name'][:38]:<39} "
-              f"exp={case['expected']:<19} got={verdict:<19} "
+              f"exp={case['expected']:<23} got={verdict:<23} "
               f"water={water}  {mark}")
 
     committed = [r for r in rows if not r[3]]

@@ -2,7 +2,12 @@
 // In the real system, this comes from Google Earth Engine Sentinel-1 GRD queries
 
 export type VerdictType =
-  | 'PRE_EXISTING'
+  // A structure already stood at the site before the NTP: the evidence is the
+  // backscatter level, and there is no construction event to date.
+  | 'PRE_EXISTING_STRUCTURE'
+  // Open ground that broke at a detectable moment, just earlier than the NTP
+  // allows. There is a real change point here, with a confidence behind it.
+  | 'EARLY_START'
   | 'NO_CHANGE_DETECTED'
   | 'CONSISTENT'
   | 'DELAYED_START'
@@ -26,8 +31,8 @@ export interface AnalysisResult {
   change_point: ChangePointResult;
   verdict: VerdictType;
   // Level-based evidence: whether a structure was already standing at the NTP.
-  // Present when the analysis ran; drives the PRE_EXISTING verdict, which has no
-  // change-point date behind it.
+  // Present when the analysis ran; drives the PRE_EXISTING_STRUCTURE verdict,
+  // which has no change-point date behind it.
   prior_structure?: {
     exists_before_ntp: boolean;
     pre_ntp_db: number | null;
@@ -93,7 +98,7 @@ export const KNOWN_CASES: KnownCase[] = [
     source: 'COA fraud audit, contract 24CC0149',
     source_url: 'https://www.philstar.com/nation/2025/09/26/2475562/irregularities-detailed-audit-reports-bulacan-flood-control-projects',
     description: 'COA found satellite imagery from 29 February 2024 — two months before the 23 April Notice-to-Proceed — already showing a flood control structure at the approved site. A P98.99M joint venture.',
-    scenario: 'PRE_EXISTING',
+    scenario: 'PRE_EXISTING_STRUCTURE',
   },
   {
     name: 'Sipat Section, Plaridel — Angat River (Ghost Project)',
@@ -128,15 +133,20 @@ function generateSARSeries(
   startDate.setMonth(startDate.getMonth() - 10);
 
   const series: BackscatterPoint[] = [];
-  const baseLevel = -14 + (Math.random() - 0.5) * 2; // typical urban backscatter ~-12 to -16 dB
+  // A site that was already built reads high from the first sample; open ground
+  // reads at the typical urban level of about -12 to -16 dB.
+  const isAlreadyBuilt = scenario === 'PRE_EXISTING_STRUCTURE';
+  const baseLevel = (isAlreadyBuilt ? -10.5 : -14) + (Math.random() - 0.5) * 2;
 
   let changeIndex: number;
-  if (scenario === 'PRE_EXISTING') {
+  if (scenario === 'EARLY_START') {
     changeIndex = Math.floor(numPoints * 0.28); // change well before claimed date
   } else if (scenario === 'CONSISTENT') {
     changeIndex = Math.floor(numPoints * 0.62); // change right around claimed date
   } else {
-    changeIndex = -1; // no change
+    // Includes PRE_EXISTING_STRUCTURE: the structure predates the window, so
+    // the series is flat and high throughout with no step to find.
+    changeIndex = -1;
   }
 
   for (let i = 0; i < numPoints; i++) {
@@ -172,11 +182,13 @@ function generateSARSeries(
 }
 
 function getDetectedDate(series: BackscatterPoint[], scenario: VerdictType, claimedDate: string): ChangePointResult {
-  if (scenario === 'NO_CHANGE_DETECTED') {
+  // Neither of these produces a change point: one because nothing was built,
+  // the other because it was built before the window opens.
+  if (scenario === 'NO_CHANGE_DETECTED' || scenario === 'PRE_EXISTING_STRUCTURE') {
     return { detected_date: null, confidence: 0.18, days_difference: null };
   }
 
-  const changeIndex = scenario === 'PRE_EXISTING'
+  const changeIndex = scenario === 'EARLY_START'
     ? Math.floor(series.length * 0.28)
     : Math.floor(series.length * 0.62);
 
@@ -194,9 +206,12 @@ function getDetectedDate(series: BackscatterPoint[], scenario: VerdictType, clai
 }
 
 function getExplanation(verdict: VerdictType, changePoint: ChangePointResult): string {
-  if (verdict === 'PRE_EXISTING') {
+  if (verdict === 'PRE_EXISTING_STRUCTURE') {
+    return `Radar backscatter at this coordinate already read as a hard structure before the contract Notice-to-Proceed, and it barely moved across the contract period. The site appears to have been built before the contract was awarded, rather than by it — a potential indicator of pre-existing infrastructure fraud.`;
+  }
+  if (verdict === 'EARLY_START') {
     const days = Math.abs(changePoint.days_difference ?? 0);
-    return `Satellite backscatter data shows significant ground disturbance approximately ${days} days BEFORE the contract Notice-to-Proceed date. This indicates the structure may have already existed prior to the contract award — a potential indicator of pre-existing infrastructure fraud.`;
+    return `Satellite backscatter data shows significant ground disturbance approximately ${days} days BEFORE the contract Notice-to-Proceed date. Work appears to have broken ground ahead of the contract timeline, which may warrant review of the mobilisation and award records.`;
   }
   if (verdict === 'DELAYED_START') {
     const days = Math.abs(changePoint.days_difference ?? 0);
@@ -262,17 +277,19 @@ export async function analyzeCoordinate(
   } else {
     // Custom lookup — derive a stable but arbitrary scenario from the coordinates.
     const hash = Math.abs(Math.round(lat * 100 + lon * 10)) % 3;
-    resolvedScenario = hash === 0 ? 'PRE_EXISTING' : hash === 1 ? 'NO_CHANGE_DETECTED' : 'CONSISTENT';
+    resolvedScenario = hash === 0 ? 'PRE_EXISTING_STRUCTURE' : hash === 1 ? 'NO_CHANGE_DETECTED' : 'CONSISTENT';
   }
 
   const series = generateSARSeries(claimedDate, resolvedScenario);
   const changePoint = getDetectedDate(series, resolvedScenario, claimedDate);
   const explanation = getExplanation(resolvedScenario, changePoint);
 
-  // PRE_EXISTING mock: synthesise level-based evidence so VerdictBanner renders
-  // the signal tiles and the confidence ring correctly without a real GEE response.
-  const mockPriorStructure = resolvedScenario === 'PRE_EXISTING'
-    ? { exists_before_ntp: false, pre_ntp_db: null, post_ntp_db: null, rise_db: null }
+  // PRE_EXISTING_STRUCTURE mock: synthesise the level-based evidence the real
+  // backend returns, so VerdictBanner renders the signal tiles instead of the
+  // change-point tiles and suppresses the confidence ring. EARLY_START gets no
+  // prior structure — it rests on the change point, which the ring scores.
+  const mockPriorStructure = resolvedScenario === 'PRE_EXISTING_STRUCTURE'
+    ? { exists_before_ntp: true, pre_ntp_db: 4.1, post_ntp_db: 4.4, rise_db: 0.3 }
     : undefined;
 
   return {

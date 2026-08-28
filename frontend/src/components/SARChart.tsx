@@ -143,10 +143,12 @@ export default function SARChart({ result }: { result: AnalysisResult }) {
   const chartData = series.map(p => ({ ...p, dateMs: new Date(p.date).getTime() }));
   const claimedMs = new Date(claimed_date).getTime();
 
+  const isPreContract = verdict === 'PRE_EXISTING_STRUCTURE' || verdict === 'EARLY_START';
   const changeColor =
-    verdict === 'PRE_EXISTING' ? 'var(--error)' : verdict === 'CONSISTENT' ? 'var(--success)' : 'var(--warning)';
+    isPreContract ? 'var(--error)' : verdict === 'CONSISTENT' ? 'var(--success)' : 'var(--warning)';
   const verdictLabel =
-    verdict === 'PRE_EXISTING' ? 'Pre-existing'
+    verdict === 'PRE_EXISTING_STRUCTURE' ? 'Pre-existing'
+    : verdict === 'EARLY_START' ? 'Early start'
     : verdict === 'CONSISTENT' ? 'Consistent'
     : verdict === 'DELAYED_START' ? 'Delayed start'
     : verdict === 'INSUFFICIENT_DATA' ? 'No data'

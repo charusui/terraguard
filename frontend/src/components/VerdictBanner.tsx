@@ -15,12 +15,19 @@ const CONFIG: Record<VerdictType, {
   accent: string;
   summary: string;
 }> = {
-  PRE_EXISTING: {
+  PRE_EXISTING_STRUCTURE: {
     Icon: WarningDiamond,
-    label: 'Pre-existing structure detected',
+    label: 'Structure predates the contract',
     className: 'verdict-red',
     accent: 'var(--error)',
-    summary: 'Radar backscatter shifted before the claimed notice-to-proceed date, indicating ground was already broken.',
+    summary: 'Radar backscatter already read as a hard structure before the claimed notice-to-proceed date, and barely moved afterwards.',
+  },
+  EARLY_START: {
+    Icon: WarningDiamond,
+    label: 'Ground broken before the contract',
+    className: 'verdict-red',
+    accent: 'var(--error)',
+    summary: 'Radar backscatter shifted before the claimed notice-to-proceed date, indicating work began ahead of schedule.',
   },
   NO_CHANGE_DETECTED: {
     Icon: Question,
@@ -79,6 +86,25 @@ function formatCoordinates(lat: number, lon: number): string {
   return `${latStr}, ${lonStr}`;
 }
 
+// Where the ring is hidden, the gap has to say so. A blank space beside a
+// verdict reads as a score too good to need printing, which is the reverse of
+// what a missing change point means: the confidence values behind these
+// verdicts are low, not high, and they measure an event that was never found.
+// Each note names the reason rather than the absence.
+const ABSENT_SCORE_NOTES: Partial<Record<VerdictType, string>> = {
+  PRE_EXISTING_STRUCTURE:
+    'This verdict rests on the signal level, not on a dated event, so there is no change point to score. The readings below carry the evidence.',
+  NO_CHANGE_DETECTED:
+    'No change point was found anywhere in the record, so there is nothing to score. That absence is itself the finding.',
+  INSUFFICIENT_DATA:
+    'No usable radar imagery covers this location and period, so nothing was measured and nothing can be scored.',
+  LOCATION_MISMATCH:
+    'The reading describes the wrong place, so scoring it would rate a claim this verdict has already withdrawn.',
+};
+
+const ABSENT_SCORE_FALLBACK =
+  'The analysis did not settle on a single change point, so there is no detected start of work to score.';
+
 const RING_RADIUS = 31;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -134,6 +160,16 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
   const prior = result.prior_structure;
   const isLevelEvidence = Boolean(prior?.exists_before_ntp);
 
+  // A rejected coordinate keeps its change point in the payload on purpose, so
+  // the chart can still show what is actually at the point. Scoring that change
+  // point is a different matter: this verdict says the reading describes the
+  // wrong place, so a confidence figure beside it would rate a claim the card
+  // has just withdrawn. The backend already blanks `days_difference` for the
+  // same reason; the ring keys off `detected_date` and was missed.
+  const isRejectedLocation = result.verdict === 'LOCATION_MISMATCH';
+
+  const isConfidenceScored = Boolean(detected_date) && !isLevelEvidence && !isRejectedLocation;
+
   return (
     <div style={{ paddingTop: '32px', fontFamily: FONT_HEADING }}>
       <div
@@ -182,27 +218,39 @@ export default function VerdictBanner({ result }: { result: AnalysisResult }) {
           {/* The ring scores the change point. A level-based verdict has no
               change point behind it, so showing that number here would rate
               confidence in a shift the finding does not rest on. */}
-          {detected_date && !isLevelEvidence && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                background: 'var(--canvas-soft)',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                flex: '0 1 auto',
-              }}
-            >
-              <ConfidenceRing confidence={confidence} accent={cfg.accent} />
-              <div style={{ maxWidth: '160px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '3px' }}>Detector confidence</div>
-                <div style={{ fontSize: '12px', lineHeight: 1.45, fontFamily: FONT_BODY, color: 'var(--mute)' }}>
-                  Probability the radar shift represents physical construction
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              background: 'var(--canvas-soft)',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              flex: '0 1 auto',
+            }}
+          >
+            {isConfidenceScored ? (
+              <>
+                <ConfidenceRing confidence={confidence} accent={cfg.accent} />
+                <div style={{ maxWidth: '160px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '3px' }}>Detector confidence</div>
+                  <div style={{ fontSize: '12px', lineHeight: 1.45, fontFamily: FONT_BODY, color: 'var(--mute)' }}>
+                    Probability the radar shift represents physical construction
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </>
+            ) : (
+              <>
+                <Question size={22} weight="regular" style={{ flexShrink: 0, color: 'var(--mute)' }} />
+                <div style={{ maxWidth: '250px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginBottom: '3px' }}>No confidence score</div>
+                  <div style={{ fontSize: '12px', lineHeight: 1.45, fontFamily: FONT_BODY, color: 'var(--mute)' }}>
+                    {ABSENT_SCORE_NOTES[result.verdict] ?? ABSENT_SCORE_FALLBACK}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Data tiles */}

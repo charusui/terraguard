@@ -51,7 +51,7 @@ function backscatterAnswer(): string {
 }
 
 function noDayGapAnswer(result: AnalysisResult): string {
-  if (result.verdict === 'PRE_EXISTING') {
+  if (result.verdict === 'PRE_EXISTING_STRUCTURE') {
     const detected = result.change_point.detected_date;
     const tail = detected
       ? ` The change point the detector did find, on ${formatDate(detected)}, lands after that — it is a later movement at a site that was already built, not the start of it.`
@@ -92,12 +92,20 @@ function checkNextAnswer(result: AnalysisResult): string {
     'describes — an adjacent structure a short distance away produces a reading like this one.';
 
   switch (result.verdict) {
-    case 'PRE_EXISTING':
+    case 'PRE_EXISTING_STRUCTURE':
       return (
         `${opening} Then look for an earlier contract at the same location, and compare the ` +
         `as-built records against the ${formatDate(result.claimed_date)} Notice-to-Proceed. An ` +
         'authorized auditor can request the pre-NTP inspection photographs, which settle it ' +
         'either way.'
+      );
+    case 'EARLY_START':
+      return (
+        `${opening} Then check whether site preparation was authorised before the ` +
+        `${formatDate(result.claimed_date)} Notice-to-Proceed, which may or may not be ` +
+        'permissible under the contract terms, and confirm the award date against the detected ' +
+        'start. An authorized auditor can set the mobilisation records against what the radar ' +
+        'shows.'
       );
     case 'NO_CHANGE_DETECTED':
       return (

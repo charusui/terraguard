@@ -52,11 +52,17 @@ def evaluate_verdict(
     # find — it was built before the window even opens — so the detector latches
     # onto whatever shifted later and the timeline logic reads that as a late
     # start. The evidence here is the level, not a date.
+    #
+    # This is deliberately a different verdict from EARLY_START below. There the
+    # site was open ground and a real construction event was detected, only
+    # earlier than the paperwork allows; here nothing was ever built during the
+    # contract because the structure predates it. One is a schedule problem, the
+    # other is a claim against work that already existed.
     if prior_structure and prior_structure.get("exists_before_ntp"):
         pre_db = prior_structure["pre_ntp_db"]
         rise_db = prior_structure["rise_db"]
         return {
-            "verdict": "PRE_EXISTING",
+            "verdict": "PRE_EXISTING_STRUCTURE",
             "explanation": (
                 f"Before the contract Notice-to-Proceed, radar backscatter at this "
                 f"coordinate already read {pre_db} dB above the surrounding land, "
@@ -117,10 +123,14 @@ def evaluate_verdict(
             "days_difference": days_diff,
         }
 
+    # Open ground that broke at a dated, detectable moment — just earlier than
+    # the NTP permits. Unlike PRE_EXISTING_STRUCTURE there is a construction
+    # event here, so the change point and its confidence score both mean
+    # something and the UI shows them.
     if detected_date < claimed - tolerance:
         days_before = abs(days_diff)
         return {
-            "verdict": "PRE_EXISTING",
+            "verdict": "EARLY_START",
             "explanation": (
                 f"Radar backscatter data indicates significant ground disturbance approximately "
                 f"{days_before} days before the contract Notice-to-Proceed date. This timeline "

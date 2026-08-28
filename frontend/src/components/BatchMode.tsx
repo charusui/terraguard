@@ -86,7 +86,8 @@ function parseCSV(text: string): { rows: BatchRow[]; raw: ContractRow[] } {
 }
 
 const VERDICT_CFG: Record<VerdictType, { label: string; accent: string }> = {
-  PRE_EXISTING:       { label: 'Pre-existing', accent: 'var(--error)' },
+  PRE_EXISTING_STRUCTURE: { label: 'Pre-existing', accent: 'var(--error)' },
+  EARLY_START:        { label: 'Early start',  accent: 'var(--error)' },
   NO_CHANGE_DETECTED: { label: 'No change',    accent: 'var(--warning)' },
   LOCATION_MISMATCH:  { label: 'Bad location', accent: 'var(--warning)' },
   INSUFFICIENT_DATA:  { label: 'No data',       accent: 'var(--mute)' },
@@ -243,7 +244,8 @@ export default function BatchMode() {
   // which would otherwise inflate a real verdict with failed lookups.
   const ok = results.filter(r => !r.error);
   const counts = {
-    pre: ok.filter(r => r.verdict === 'PRE_EXISTING').length,
+    pre: ok.filter(r => r.verdict === 'PRE_EXISTING_STRUCTURE').length,
+    early: ok.filter(r => r.verdict === 'EARLY_START').length,
     no: ok.filter(r => r.verdict === 'NO_CHANGE_DETECTED').length,
     delayed: ok.filter(r => r.verdict === 'DELAYED_START').length,
     noData: ok.filter(r => r.verdict === 'INSUFFICIENT_DATA').length,
@@ -369,6 +371,7 @@ export default function BatchMode() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '14px' }}>
             {([
               { label: 'Pre-existing', val: counts.pre, color: 'var(--error)' },
+              { label: 'Early start', val: counts.early, color: 'var(--error)' },
               { label: 'No change', val: counts.no, color: 'var(--warning)' },
               { label: 'Delayed start', val: counts.delayed, color: 'var(--warning)' },
               ...(counts.badLocation > 0 ? [{ label: 'Bad location', val: counts.badLocation, color: 'var(--warning)' }] : []),
@@ -396,13 +399,15 @@ export default function BatchMode() {
           {/* Proportion bar */}
           <div style={{ height: '8px', borderRadius: '999px', overflow: 'hidden', display: 'flex', gap: '2px', background: 'var(--canvas-soft-2)' }}>
             {counts.pre > 0 && <div style={{ width: `${(counts.pre / total) * 100}%`, background: 'var(--error)' }} />}
+            {counts.early > 0 && <div style={{ width: `${(counts.early / total) * 100}%`, background: 'var(--error)' }} />}
             {counts.no > 0 && <div style={{ width: `${(counts.no / total) * 100}%`, background: 'var(--warning)' }} />}
             {counts.delayed > 0 && <div style={{ width: `${(counts.delayed / total) * 100}%`, background: 'var(--warning)' }} />}
             {counts.consistent > 0 && <div style={{ width: `${(counts.consistent / total) * 100}%`, background: 'var(--success)' }} />}
           </div>
           <p style={{ margin: '8px 0 0', fontSize: '12px', fontFamily: FONT_BODY, color: 'var(--mute)' }}>
-            {counts.pre + counts.delayed} of {ok.length} project{ok.length !== 1 ? 's' : ''} flagged as off-timeline
+            {counts.pre + counts.early + counts.delayed} of {ok.length} project{ok.length !== 1 ? 's' : ''} flagged as off-timeline
             {counts.pre > 0 && ` · ${counts.pre} pre-existing`}
+            {counts.early > 0 && ` · ${counts.early} early start`}
             {counts.delayed > 0 && ` · ${counts.delayed} delayed start`}
             {counts.errors > 0 && ` · ${counts.errors} failed to analyze`}
           </p>

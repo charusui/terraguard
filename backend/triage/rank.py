@@ -18,14 +18,33 @@ Weights are stated as constants so they can be argued with. They have not been
 tuned against outcomes; see VALIDATION when that exists.
 """
 
-# What the satellite reading alone contributes. PRE_EXISTING and
+# What the satellite reading alone contributes. PRE_EXISTING_STRUCTURE and
 # NO_CHANGE_DETECTED sit highest because they are the two findings COA's own
 # fraud audits describe. LOCATION_MISMATCH scores low on purpose: it is a
 # records problem to resolve before anyone drives anywhere, not an allegation.
+#
+# EARLY_START used to share the top weight, back when it and
+# PRE_EXISTING_STRUCTURE were one verdict. It should not, and it belongs below
+# DELAYED_START rather than above it. A delayed start is the adjacent case to
+# NO_CHANGE_DETECTED — a partial ghost, where the works were billed and
+# reported against a schedule the ground did not follow, so money left before
+# anything was built. An early start is the adjacent case to CONSISTENT: the
+# work happened, and the paperwork disagrees about when. TOLERANCE_DAYS already
+# absorbs routine mobilisation, so what is left is mostly a records question.
+#
+# Splitting PRE_EXISTING lowered this weight rather than raising it. While the
+# two were fused, an early start carried the suspicion that it was really a
+# structure the detector had misdated; PRE_EXISTING_STRUCTURE now catches that
+# case on the level, which leaves EARLY_START a cleaner reading of genuine
+# early work.
+#
+# Neither start anomaly reaches MEDIUM_PRIORITY_SCORE on the verdict alone.
+# Both want a contract-table flag to corroborate them before anyone drives out.
 VERDICT_WEIGHTS = {
-    "PRE_EXISTING": 40,
+    "PRE_EXISTING_STRUCTURE": 40,
     "NO_CHANGE_DETECTED": 38,
     "DELAYED_START": 22,
+    "EARLY_START": 15,
     "LOCATION_MISMATCH": 12,
     "INSUFFICIENT_DATA": 0,
     "CONSISTENT": 0,
@@ -51,8 +70,9 @@ HIGH_PRIORITY_SCORE = 55
 MEDIUM_PRIORITY_SCORE = 25
 
 VERDICT_REASONS = {
-    "PRE_EXISTING": "A structure was already standing at this site before the contract start date.",
+    "PRE_EXISTING_STRUCTURE": "A structure was already standing at this site before the contract start date.",
     "NO_CHANGE_DETECTED": "No construction activity was visible at this coordinate across the contract period.",
+    "EARLY_START": "Ground was broken before the contract start date.",
     "DELAYED_START": "Ground was broken well after the contract start date.",
     "LOCATION_MISMATCH": "The recorded coordinate does not match the structure the contract describes.",
     "INSUFFICIENT_DATA": "No usable satellite imagery covers this location and period.",
