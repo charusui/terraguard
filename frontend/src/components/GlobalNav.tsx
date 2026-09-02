@@ -15,6 +15,7 @@ import logoLight from '../assets/logo-light-mode.png';
 const LINKS = [
   { path: '/', label: 'Home' },
   { path: '/dashboard', label: 'Dashboard' },
+  { path: '/map', label: 'Map' },
   { path: '/guide', label: 'Guide' },
 ];
 
