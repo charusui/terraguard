@@ -325,7 +325,7 @@ export default function AnalysisPanel() {
                     paddingLeft: '16px',
                     display: 'flex', gap: '32px', flexWrap: 'wrap',
                   }}>
-                    <Stat label="NTP Date" value={kase.claimed_ntp_date} mono />
+                    <Stat label="NTP Date" value={kase.claimed_ntp_date} mono tooltip="Notice to Proceed — the official start date of the contract." />
                     <Stat label="Coordinates" value={`${kase.lat}°N, ${kase.lon}°E`} mono />
                     <Stat label="Source" value={kase.source} link={kase.source_url} />
                   </div>
@@ -553,10 +553,23 @@ export default function AnalysisPanel() {
   );
 }
 
-function Stat({ label, value, mono, link }: { label: string; value: string; mono?: boolean; link?: string }) {
+function Stat({ label, value, mono, link, tooltip }: { label: string; value: string; mono?: boolean; link?: string; tooltip?: string }) {
   return (
     <div>
-      <div className="t-micro-cap" style={{ marginBottom: '4px' }}>{label}</div>
+      <div className="t-micro-cap" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+        {tooltip && (
+          <span
+            title={tooltip}
+            style={{ cursor: 'help', display: 'flex', alignItems: 'center', color: 'var(--mute)', lineHeight: 1 }}
+            aria-label={tooltip}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={14} height={14}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+          </span>
+        )}
+        {label}
+      </div>
       {link ? (
         <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 400, fontFamily: mono ? 'var(--font-mono)' : 'var(--font-body)', color: 'var(--brand)', textDecoration: 'underline' }}>
           {value}

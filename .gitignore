@@ -1,5 +1,6 @@
 /node_modules
 backend/service-account-key.json
+/node_modules
 *.json.key
 .env
 .env.local
