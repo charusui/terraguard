@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/shared/components/Button';
+import CrowdWalking from '@/components/CrowdWalking';
 
 import logo from '../assets/logo.png';
 import logoLight from '../assets/logo-light-mode.png';
@@ -61,8 +62,11 @@ export default function HomePage() {
     <div style={{ background: 'var(--canvas)', minHeight: '100vh', color: 'var(--ink)' }}>
 
       {/* ─── ASYMMETRIC HERO ─── */}
-      <section style={{ paddingTop: '128px', paddingBottom: '96px', overflow: 'hidden' }}>
-        <div className="band-inner">
+      <section style={{ position: 'relative', paddingTop: '128px', paddingBottom: '96px', overflow: 'hidden' }}>
+        {/* Animated crowd of walking characters behind hero content */}
+        <CrowdWalking />
+
+        <div className="band-inner" style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
